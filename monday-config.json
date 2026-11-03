@@ -1,17 +1,92 @@
 {
+  "project_mode": "group",
+  "group_mode": {
+    "board_portcos": {
+      "_example_board_id": "ACC"
+    },
+    "skip_groups": [
+      "Pre-Project / Kickoff"
+    ],
+    "status_columns": [
+      "Status"
+    ],
+    "owner_columns": [
+      "Task Owner",
+      "Owner",
+      "Person"
+    ],
+    "priority_columns": [
+      "Task Priority",
+      "Priority"
+    ],
+    "timeline_columns": [
+      "Task Timeline",
+      "Timeline",
+      "Due Date"
+    ],
+    "files_columns": [
+      "Files"
+    ]
+  },
   "board_ids": [],
-  "project_id_column": ["Project ID", "ProjectID", "ID"],
+  "project_id_column": [
+    "Project ID",
+    "ProjectID",
+    "ID"
+  ],
   "columns": {
-    "PortcoName":     ["Portco", "PortCo", "Portco Name", "Client", "Company"],
-    "ContentType":    ["Content Type", "Type", "Format"],
-    "IDOwner":        ["ID Owner", "Owner", "Person", "Assignee", "Designer"],
-    "Status":         ["Status", "Stage"],
-    "ScriptReceived": ["Script Received", "Script Date", "Request Date"],
-    "StartDate":      ["Start Date", "Start"],
-    "DueDate":        ["Due Date", "Due", "Deadline", "Timeline", "Date"],
-    "Progress":       ["Progress", "% Complete", "Completion"],
-    "FeedbackRounds": ["Feedback Rounds", "Feedback", "Review Rounds"],
-    "Priority":       ["Priority"]
+    "PortcoName": [
+      "Portco",
+      "PortCo",
+      "Portco Name",
+      "Client",
+      "Company"
+    ],
+    "ContentType": [
+      "Content Type",
+      "Type",
+      "Format"
+    ],
+    "IDOwner": [
+      "ID Owner",
+      "Owner",
+      "Person",
+      "Assignee",
+      "Designer"
+    ],
+    "Status": [
+      "Status",
+      "Stage"
+    ],
+    "ScriptReceived": [
+      "Script Received",
+      "Script Date",
+      "Request Date"
+    ],
+    "StartDate": [
+      "Start Date",
+      "Start"
+    ],
+    "DueDate": [
+      "Due Date",
+      "Due",
+      "Deadline",
+      "Timeline",
+      "Date"
+    ],
+    "Progress": [
+      "Progress",
+      "% Complete",
+      "Completion"
+    ],
+    "FeedbackRounds": [
+      "Feedback Rounds",
+      "Feedback",
+      "Review Rounds"
+    ],
+    "Priority": [
+      "Priority"
+    ]
   },
   "use_group_name_as_portco_if_no_column": true,
   "status_map": {

@@ -2,6 +2,7 @@
 PortCo Learning Hub - Monday.com sync
 -------------------------------------
 Reads your Monday.com board(s) and rewrites the "Projects" sheet in data.xlsx.
+Group mode (default): each Monday GROUP is one project; tasks = ADDIE phases, subitems = steps.
 The Portcos, Communications and Files sheets you maintain in Excel are kept.
 
 Runs automatically on GitHub (see .github/workflows/monday-sync.yml).
@@ -18,6 +19,8 @@ import urllib.request
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.worksheet.datavalidation import DataValidation
+
+from project_rollup import assign_ids, file_rows, rollup
 
 API_URL = "https://api.monday.com/v2"
 API_VERSION = "2024-10"
@@ -48,13 +51,14 @@ def gql(query, variables, token):
 
 def item_fields(with_updates):
     upd = "updates(limit: 50) { created_at text_body creator { name } }" if with_updates else ""
-    return f"id name group {{ title }} column_values {{ id type text }} {upd}"
+    cv = "column_values { id type text column { title } }"
+    return f"id name group {{ id title }} {cv} subitems {{ id name {cv} }} {upd}"
 
 
 def fetch_board(board_id, token, with_updates):
     f = item_fields(with_updates)
-    first = gql(f"""query ($ids: [ID!]) {{ boards(ids: $ids) {{ id name columns {{ id title type }}
-        items_page(limit: 200) {{ cursor items {{ {f} }} }} }} }}""", {"ids": [str(board_id)]}, token)
+    first = gql(f"""query ($ids: [ID!]) {{ boards(ids: $ids) {{ id name columns {{ id title type }} groups {{ id title }}
+        items_page(limit: 100) {{ cursor items {{ {f} }} }} }} }}""", {"ids": [str(board_id)]}, token)
     boards = first.get("boards") or []
     if not boards:
         raise RuntimeError(f"Board {board_id} not found, or the token has no access to it.")
@@ -62,7 +66,7 @@ def fetch_board(board_id, token, with_updates):
     items = list(board["items_page"]["items"])
     cursor = board["items_page"]["cursor"]
     while cursor:
-        page = gql(f"""query ($c: String!) {{ next_items_page(limit: 200, cursor: $c) {{ cursor items {{ {f} }} }} }}""",
+        page = gql(f"""query ($c: String!) {{ next_items_page(limit: 100, cursor: $c) {{ cursor items {{ {f} }} }} }}""",
                    {"c": cursor}, token)["next_items_page"]
         items += page["items"]
         cursor = page["cursor"]
@@ -139,6 +143,56 @@ def build_projects(board, items, cfg):
     return rows, comms
 
 
+def _by_title(column_values):
+    return {(cv.get("column") or {}).get("title", "").strip().lower(): (cv.get("text") or "").strip()
+            for cv in column_values}
+
+
+def _pick(vals, names):
+    for n in names:
+        if vals.get(n.lower()):
+            return vals[n.lower()]
+    return ""
+
+
+def _timeline(vals, cfg):
+    tl = _pick(vals, cfg["group_mode"]["timeline_columns"])
+    return parse_date(tl), parse_date(tl, end=True)
+
+
+def build_projects_by_group(board, items, cfg, portco):
+    """Group mode: each Monday GROUP is one project; its items are phases, subitems are steps."""
+    gm = cfg["group_mode"]
+    order = [g["title"] for g in board.get("groups", [])]
+    tasks_by_group = {t: [] for t in order}
+    comms_raw = []
+    for it in items:
+        g = (it.get("group") or {}).get("title", "")
+        vals = _by_title(it["column_values"])
+        start, end = _timeline(vals, cfg)
+        files = re.findall(r"https?://[^,]+?(?=, https?://|$)", _pick(vals, gm["files_columns"]))
+        subs = []
+        for sub in it.get("subitems") or []:
+            sv = _by_title(sub["column_values"])
+            ss, se = _timeline(sv, cfg)
+            subs.append({"name": sub["name"], "status": _pick(sv, gm["status_columns"]),
+                         "owner": _pick(sv, gm["owner_columns"]), "start": ss, "end": se})
+        tasks_by_group.setdefault(g, []).append({
+            "name": it["name"], "status": _pick(vals, gm["status_columns"]), "owner": _pick(vals, gm["owner_columns"]),
+            "priority": _pick(vals, gm["priority_columns"]), "start": start, "end": end,
+            "files": [f.strip() for f in files], "subitems": subs})
+        for u in it.get("updates") or []:
+            comms_raw.append((g, u))
+    projects = [p for g, tasks in tasks_by_group.items()
+                if (p := rollup(g, tasks, portco, gm.get("skip_groups", [])))]
+    return projects, comms_raw
+
+
+def board_portco(board, cfg):
+    names = cfg["group_mode"].get("board_portcos", {})
+    return names.get(str(board["id"])) or str(board["name"]).split()[0]
+
+
 # ---------------------------------------------------------------- Excel
 HDR_FILL = PatternFill("solid", fgColor="1F3A5F")
 HDR_FONT = Font(bold=True, color="FFFFFF")
@@ -187,22 +241,40 @@ def main():
         return 1
 
     with_updates = bool(cfg.get("include_updates_as_communications"))
-    projects, monday_comms, names = [], [], []
+    group_mode = cfg.get("project_mode", "group") == "group"
+    wb = load_workbook(DATA_FILE) if os.path.exists(DATA_FILE) else Workbook()
+    if "Sheet" in wb.sheetnames and len(wb.sheetnames) == 1:
+        wb.remove(wb["Sheet"])
+
+    projects, monday_comms, names, monday_files = [], [], [], []
     for bid in board_ids:
         board, items = fetch_board(bid, token, with_updates)
-        p, c = build_projects(board, items, cfg)
-        projects += p
+        if group_mode:
+            portco = board_portco(board, cfg)
+            grp, raw = build_projects_by_group(board, items, cfg, portco)
+            assign_ids(grp, read_sheet(wb, "Projects") + [{"ProjectName": p["ProjectName"], "ProjectID": p["ProjectID"]}
+                                                          for p in projects])
+            monday_files += file_rows(grp)
+            ids = {p["ProjectName"]: p["ProjectID"] for p in grp}
+            c = []
+            for g, u in raw:
+                if g not in ids:
+                    continue
+                text = re.sub(r"\s+", " ", u.get("text_body") or "").strip()
+                c.append([parse_date(u.get("created_at")), portco, ids[g], MONDAY_COMM_TYPE, "Sent",
+                          (text[:120] + "…") if len(text) > 120 else text, (u.get("creator") or {}).get("name", "")])
+            p = [[r.get(h, "") for h in PROJECT_HEADERS] for r in grp]
+        else:
+            p, c = build_projects(board, items, cfg)
+        projects += [{"ProjectName": r[2], "ProjectID": r[0], "row": r} for r in p]
         monday_comms += c
         names.append(board["name"])
         print(f"Board '{board['name']}' ({bid}): {len(p)} projects, {len(c)} updates")
 
+    projects = [x["row"] for x in projects]
     if not projects:
         print("Monday returned 0 projects - data.xlsx left unchanged as a safety measure.")
         return 1
-
-    wb = load_workbook(DATA_FILE) if os.path.exists(DATA_FILE) else Workbook()
-    if "Sheet" in wb.sheetnames and len(wb.sheetnames) == 1:
-        wb.remove(wb["Sheet"])
 
     # Projects - fully replaced from Monday
     ws = write_sheet(wb, "Projects", PROJECT_HEADERS, projects, [14, 26, 34, 15, 16, 15, 13, 13, 17, 10, 15, 10],
@@ -228,9 +300,10 @@ def main():
     comms.sort(key=lambda r: r[0] if isinstance(r[0], dt.datetime) else dt.datetime.min, reverse=True)
     write_sheet(wb, "Communications", COMMS_HEADERS, comms, [13, 26, 14, 15, 11, 50, 16], date_cols=("A",))
 
-    # Files - untouched (create header if missing)
-    if "Files" not in wb.sheetnames:
-        write_sheet(wb, "Files", FILES_HEADERS, [], [44, 26, 14, 15, 9, 13, 40], date_cols=("F",))
+    # Files - keep rows you added by hand, refresh attachments that come from Monday
+    files = [[f.get(h, "") for h in FILES_HEADERS] for f in read_sheet(wb, "Files")
+             if "monday.com" not in str(f.get("Link") or "")] + monday_files
+    write_sheet(wb, "Files", FILES_HEADERS, files, [52, 12, 11, 15, 9, 13, 60], date_cols=("F",))
 
     # Sync info for the dashboard
     now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
