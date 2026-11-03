@@ -162,11 +162,14 @@ function fill(id, values, allLabel) {
   el.innerHTML = `<option value="">${allLabel}</option>` + values.map(v => `<option value="${esc(v)}">${esc(id === "fPortco" ? String(v).toUpperCase() : v)}</option>`).join("");
   if (values.includes(cur)) el.value = cur;
 }
+let selectedProject = null;   // ProjectID picked from the search suggestions
 const F = () => ({ portco: $("fPortco").value, status: $("fStatus").value, owner: $("fOwner").value, q: $("fSearch").value.trim().toLowerCase() });
+const matchesQuery = (p, q) => `${p.ProjectName} ${p.ProjectID}`.toLowerCase().includes(q);
 function filteredProjects() {
   const f = F();
+  if (selectedProject) return DATA.projects.filter(p => p.ProjectID === selectedProject);
   return DATA.projects.filter(p => (!f.portco || p.PortcoName === f.portco) && (!f.status || p.Status === f.status) &&
-    (!f.owner || p.IDOwner === f.owner) && (!f.q || `${p.ProjectName} ${p.ProjectID}`.toLowerCase().includes(f.q)));
+    (!f.owner || p.IDOwner === f.owner) && (!f.q || matchesQuery(p, f.q)));
 }
 
 /* ---------- Render ---------- */
@@ -176,6 +179,7 @@ function render() {
   const f = F(), narrowed = f.status || f.owner || f.q;
   const comms = DATA.comms.filter(c => (!f.portco || c.PortcoName === f.portco) && (!narrowed || ids.has(c.ProjectID)));
   const files = DATA.files.filter(x => (!f.portco || x.PortcoName === f.portco) && (!narrowed || ids.has(x.ProjectID)));
+  renderFilterBar(projects);
   renderKPIs(projects, comms, files);
   renderStatus(projects);
   renderPortcoBars(projects);
@@ -329,7 +333,7 @@ function renderProjectTable(projects) {
   $("projectTable").querySelector("tbody").innerHTML = rows.map(p => {
     const h = health(p);
     return `<tr><td><i class="dot ${h}"></i>${HEALTH_LABEL[h]}</td>
-      <td><strong>${esc(p.ProjectName)}</strong><br><small>${esc(p.ProjectID)}</small></td>
+      <td><strong>${mark(p.ProjectName)}</strong><br><small>${mark(p.ProjectID)}</small></td>
       <td>${esc(p.PortcoName)}</td><td>${esc(p.ContentType)}</td><td>${esc(p.IDOwner)}</td>
       <td><span class="pill st">${esc(p.Status)}</span></td>
       <td><div class="prog"><div class="bar"><span style="width:${p.Progress}%"></span></div>${p.Progress}%</div></td>
@@ -353,10 +357,89 @@ function renderFilesTable(files) {
 const shorten = (s) => String(s).length > 20 ? String(s).slice(0, 19) + "…" : s;
 function esc(v) { return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
+/* ---------- Search suggestions & active-filter bar ---------- */
+let sugIndex = -1, sugItems = [];
+function mark(text) {
+  const q = selectedProject ? "" : $("fSearch").value.trim();
+  const t = esc(text);
+  if (!q) return t;
+  const re = new RegExp("(" + esc(q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "ig");
+  return t.replace(re, '<mark class="hl">$1</mark>');
+}
+function renderSuggestions() {
+  const q = $("fSearch").value.trim().toLowerCase();
+  const box = $("searchList");
+  if (!q || selectedProject) { hideSuggestions(); return; }
+  const f = F();
+  sugItems = DATA.projects.filter(p => (!f.portco || p.PortcoName === f.portco) && matchesQuery(p, q)).slice(0, 8);
+  sugIndex = sugItems.length ? 0 : -1;
+  box.innerHTML = sugItems.length
+    ? `<div class="sl-head">${sugItems.length} matching project${sugItems.length === 1 ? "" : "s"} · click one to open it</div>` +
+      sugItems.map((p, i) => `<button type="button" class="sl-item ${i === sugIndex ? "on" : ""}" role="option" data-id="${esc(p.ProjectID)}">
+        <i class="dot ${health(p)}"></i>
+        <span class="sl-text"><b>${mark(p.ProjectName)}</b><small>${esc(p.ProjectID)} · ${esc(p.PortcoName)} · ${p.Progress}%</small></span>
+        <span class="pill st">${esc(p.Status)}</span></button>`).join("")
+    : `<div class="sl-empty">No project matches “${esc($("fSearch").value.trim())}”</div>`;
+  box.classList.remove("hidden");
+  $("fSearch").setAttribute("aria-expanded", "true");
+  box.querySelectorAll(".sl-item").forEach(el => el.onmousedown = (e) => { e.preventDefault(); selectProject(el.dataset.id); });
+}
+function hideSuggestions() {
+  $("searchList").classList.add("hidden"); $("fSearch").setAttribute("aria-expanded", "false"); sugIndex = -1;
+}
+function moveSuggestion(step) {
+  if (!sugItems.length) return;
+  sugIndex = (sugIndex + step + sugItems.length) % sugItems.length;
+  document.querySelectorAll("#searchList .sl-item").forEach((el, i) => el.classList.toggle("on", i === sugIndex));
+}
+function selectProject(id) {
+  const p = DATA.projects.find(x => x.ProjectID === id);
+  if (!p) return;
+  selectedProject = id;
+  $("fSearch").value = p.ProjectName;
+  hideSuggestions();
+  render();
+  const t = document.getElementById("sec-projects"); if (t && t.scrollIntoView) t.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function clearSearch() { selectedProject = null; $("fSearch").value = ""; hideSuggestions(); render(); }
+
+function renderFilterBar(projects) {
+  const f = F(), bar = $("filterBar"), chips = [];
+  if (selectedProject) {
+    const p = DATA.projects.find(x => x.ProjectID === selectedProject);
+    chips.push(`<span class="chip sel">&#10003; Project: <b>${esc(p ? p.ProjectName : selectedProject)}</b> <button data-x="project" aria-label="Remove">&#10005;</button></span>`);
+  } else {
+    if (f.q) chips.push(`<span class="chip">Search: <b>“${esc($("fSearch").value.trim())}”</b> <button data-x="search" aria-label="Remove">&#10005;</button></span>`);
+    if (f.status) chips.push(`<span class="chip">Status: <b>${esc(f.status)}</b> <button data-x="fStatus" aria-label="Remove">&#10005;</button></span>`);
+    if (f.owner) chips.push(`<span class="chip">Owner: <b>${esc(f.owner)}</b> <button data-x="fOwner" aria-label="Remove">&#10005;</button></span>`);
+    if (f.portco && !(SESSION && SESSION.role === "portco")) chips.push(`<span class="chip">Portco: <b>${esc(f.portco)}</b> <button data-x="fPortco" aria-label="Remove">&#10005;</button></span>`);
+  }
+  if (!chips.length) { bar.classList.add("hidden"); bar.innerHTML = ""; return; }
+  const n = projects.length, total = DATA.projects.length;
+  bar.innerHTML = `<span class="fb-count">${selectedProject ? "Showing 1 project" : `Showing <b>${n}</b> of ${total} project${total === 1 ? "" : "s"}`}</span>
+    ${chips.join("")}<button class="fb-clear" data-x="all">Clear all</button>`;
+  bar.classList.remove("hidden");
+  bar.querySelectorAll("[data-x]").forEach(b => b.onclick = () => {
+    const x = b.dataset.x;
+    if (x === "project" || x === "search") clearSearch();
+    else if (x === "all") { ["fPortco", "fStatus", "fOwner"].forEach(id => $(id).value = ""); clearSearch(); }
+    else { $(x).value = ""; render(); }
+  });
+}
+
 /* ---------- Wire up ---------- */
-["fPortco", "fStatus", "fOwner"].forEach(id => $(id).addEventListener("change", render));
-$("fSearch").addEventListener("input", render);
-$("clearBtn").onclick = () => { ["fPortco", "fStatus", "fOwner", "fSearch"].forEach(id => $(id).value = ""); render(); };
+["fPortco", "fStatus", "fOwner"].forEach(id => $(id).addEventListener("change", () => { if (selectedProject) { selectedProject = null; $("fSearch").value = ""; } render(); }));
+$("fSearch").addEventListener("input", () => { selectedProject = null; render(); renderSuggestions(); });
+$("fSearch").addEventListener("focus", renderSuggestions);
+$("fSearch").addEventListener("blur", () => setTimeout(hideSuggestions, 120));
+$("fSearch").addEventListener("keydown", (e) => {
+  const open = !$("searchList").classList.contains("hidden");
+  if (e.key === "ArrowDown" && open) { e.preventDefault(); moveSuggestion(1); }
+  else if (e.key === "ArrowUp" && open) { e.preventDefault(); moveSuggestion(-1); }
+  else if (e.key === "Enter" && open && sugIndex >= 0) { e.preventDefault(); selectProject(sugItems[sugIndex].ProjectID); }
+  else if (e.key === "Escape") { if (open) hideSuggestions(); else clearSearch(); }
+});
+$("clearBtn").onclick = () => { ["fPortco", "fStatus", "fOwner"].forEach(id => $(id).value = ""); clearSearch(); };
 $("refreshBtn").onclick = () => { usingLocalFile = false; loadFromRepo(true); };
 ["fileInput", "fileInputTop"].forEach(id => $(id).onchange = (e) => { if (e.target.files[0]) loadFromFile(e.target.files[0]); e.target.value = ""; });
 document.querySelectorAll("nav a").forEach(a => a.addEventListener("click", () => {
@@ -523,6 +606,7 @@ function logout(message) {
   DATA = { portcos: [], projects: [], comms: [], files: [] };
   sessionStorage.removeItem("plh-session");
   ["fPortco", "fStatus", "fOwner", "fSearch"].forEach(id => $(id).value = "");
+  selectedProject = null; hideSuggestions();
   document.body.classList.add("locked"); document.body.classList.remove("portco-mode");
   $("loginNote").textContent = message || "";
   window.scrollTo(0, 0);

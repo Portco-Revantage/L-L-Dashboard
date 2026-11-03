@@ -85,7 +85,11 @@
   <!-- ===== Main ===== -->
   <div class="main" id="top">
     <header class="topbar">
-      <div class="search"><span>&#9906;</span><input id="fSearch" type="search" placeholder="Search project name or ID" /></div>
+      <div class="search-wrap">
+        <div class="search"><span>&#9906;</span><input id="fSearch" type="search" placeholder="Search project name or ID" autocomplete="off"
+          role="combobox" aria-expanded="false" aria-controls="searchList" aria-autocomplete="list" /></div>
+        <div id="searchList" class="search-list hidden" role="listbox"></div>
+      </div>
       <div class="top-actions">
         <div class="theme-toggle" id="themeToggle" title="Switch theme"><span data-t="dark">&#9790; Dark</span><span data-t="light">&#9728; Light</span></div>
         <span id="viewBadge" class="view-badge"></span>
@@ -105,6 +109,8 @@
         <label class="gold-btn admin-only">&#8853; Load Excel<input type="file" id="fileInput" accept=".xlsx,.xls" hidden /></label>
       </div>
     </section>
+
+    <div id="filterBar" class="filter-bar hidden" aria-live="polite"></div>
 
     <section class="kpis" id="kpis"></section>
 
