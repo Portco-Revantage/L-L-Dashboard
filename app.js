@@ -250,15 +250,23 @@ function renderFunnel(projects) {
   const lead = counts.indexOf(max);
   $("funnel").innerHTML = stages.map((s, i) => {
     const w = Math.round(counts[i] / max * 100);
-    const avgDays = avgAge(projects.filter(p => p.Status === s));
+    const inStage = projects.filter(p => p.Status === s);
+    const isDone = s === "Delivered";
+    const avgDays = isDone ? avgDuration(inStage) : avgAge(inStage);
     return `<div class="f-row">
       <div class="f-stage ${i === lead && counts[i] ? "lead" : ""}"><div class="fill" style="width:${i === lead ? 100 : 0}%;"></div>
         ${i !== lead ? `<div class="fill" style="width:${w}%;opacity:.18"></div>` : ""}
-        <div class="t">${esc(s)}</div><div class="s">${avgDays !== null ? `avg ${avgDays} days since script` : "–"}</div></div>
+        <div class="t">${esc(s)}</div><div class="s">${avgDays !== null ? `avg ${avgDays} days ${isDone ? "to deliver" : "since script"}` : "–"}</div></div>
       <div class="f-cell">${counts[i]}</div>
       <div class="f-cell">${Math.round(counts[i] / total * 100)}%</div>
     </div>`;
   }).join("");
+}
+/* Delivered projects: days from script received to completion (latest end date) */
+function avgDuration(list) {
+  const ds = list.filter(p => p.ScriptReceived && p.DueDate).map(p => (p.DueDate - p.ScriptReceived) / 86400000);
+  if (!ds.length) return null;
+  return Math.round(ds.reduce((a, d) => a + d, 0) / ds.length);
 }
 function avgAge(list) {
   const ds = list.map(p => p.ScriptReceived).filter(Boolean);
