@@ -9,12 +9,14 @@ const CONFIG = {
 };
 /* Colour sets for each theme (charts can't read CSS variables, so they live here too) */
 const THEMES = {
-  dark:  { gold: "#E3C88B", gold2: "#B8964A", gold3: "#7A6332", red: "#E26D5F", amber: "#E7A94F", green: "#7CC49A", grey: "#5E5E5E",
-           track: "#262626", muted: "#8C8C8C", line: "#2B2B2B", card: "#1B1B1B", tip: "#111111",
-           status: ["#F3E2B8", "#E3C88B", "#C9A660", "#9C7E43", "#6E5A30", "#4A4A4A"] },
-  light: { gold: "#2E5A8A", gold2: "#1F3A5F", gold3: "#7FA7D9", red: "#D64545", amber: "#E8A33D", green: "#2E9E6B", grey: "#9AA3B2",
-           track: "#EEF2F8", muted: "#6B7385", line: "#E3E7EF", card: "#FFFFFF", tip: "#1F3A5F",
-           status: ["#9AA3B2", "#3B7DD8", "#E8A33D", "#8E6CD8", "#2E9E6B", "#C9CED8"] }
+  /* Revantage palette – Navy (dark) */
+  dark:  { gold: "#C9A99B", gold2: "#8E695B", gold3: "#4C759D", red: "#E07A6F", amber: "#E3A857", green: "#6FC1A0", grey: "#6E8096",
+           track: "#18324D", muted: "#9FB0C3", line: "#24405E", card: "#0B2340", tip: "#021226",
+           status: ["#F2ECE8", "#4C759D", "#8AA9C7", "#C9A99B", "#8E695B", "#5A6B80"] },
+  /* Revantage palette – Tan (light) */
+  light: { gold: "#8E695B", gold2: "#7A5A4D", gold3: "#4C759D", red: "#B5473A", amber: "#8F5A0B", green: "#23735A", grey: "#8A96A3",
+           track: "#E6E0DB", muted: "#5E6B7A", line: "#E2DAD4", card: "#FFFFFF", tip: "#031730",
+           status: ["#D9CCC3", "#4C759D", "#18324D", "#C9A99B", "#8E695B", "#9AA3AE"] }
 };
 let theme = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
 let C = THEMES[theme];
@@ -32,7 +34,7 @@ function applyChartDefaults() {
   if (!window.Chart) return;
   Chart.defaults.color = C.muted;
   Chart.defaults.borderColor = C.line;
-  Chart.defaults.font.family = "Manrope, Segoe UI, sans-serif";
+  Chart.defaults.font.family = "Figtree, Segoe UI, sans-serif";
   Chart.defaults.plugins.tooltip.backgroundColor = C.tip;
   Chart.defaults.plugins.tooltip.borderColor = C.gold3;
   Chart.defaults.plugins.tooltip.borderWidth = 1;
@@ -338,7 +340,8 @@ function renderProjectTable(projects) {
   const rows = [...projects].sort((a, b) => rank[health(a)] - rank[health(b)] || (a.DueDate || 0) - (b.DueDate || 0));
   $("projectTable").querySelector("tbody").innerHTML = rows.map(p => {
     const h = health(p);
-    return `<tr><td><i class="dot ${h}"></i>${HEALTH_LABEL[h]}</td>
+    const unsched = !isClosed(p) && !p.DueDate;   // no dates = can't be judged on track
+    return `<tr><td><i class="dot ${unsched ? "plan" : h}"></i>${unsched ? "Not scheduled" : HEALTH_LABEL[h]}</td>
       <td><strong>${mark(p.ProjectName)}</strong><br><small>${mark(p.ProjectID)}</small></td>
       <td>${esc(p.PortcoName)}</td><td>${esc(p.ContentType)}</td><td>${esc(p.IDOwner)}</td>
       <td><span class="pill st">${esc(p.Status)}</span></td>
@@ -406,14 +409,14 @@ function renderTimeline(projects) {
   for (let d = new Date(min); d < max; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) months.push(new Date(d));
   const head = months.map(m => `<span style="left:${pos(m)}%">${m.toLocaleDateString("en-GB", { month: "short", year: "2-digit" }).toUpperCase()}</span>`).join("");
   const lines = months.map(m => `<i class="tl-vline" style="left:${pos(m)}%"></i>`).join("");
-  const todayLine = `<i class="tl-today" style="left:${pos(t)}%"><span>TODAY</span></i>`;
+  const todayLine = (first) => `<i class="tl-today" style="left:${pos(t)}%">${first ? "<span>TODAY</span>" : ""}</i>`;
   const col = HEALTH_COLOR_NOW();
-  const rows = dated.map(p => {
+  const rows = dated.map((p, idx) => {
     const h = health(p), left = pos(p.StartDate), width = Math.max(pos(p.DueDate) - left, 0.8);
     const tip = `${p.ProjectName}\n${fmt(p.StartDate)} → ${fmt(p.DueDate)} (${daysBetween(p.StartDate, p.DueDate)} days)\n${p.Status} · ${p.Progress}% complete · ${HEALTH_LABEL[h]}`;
     return `<div class="tl-row"><div class="tl-label"><b title="${esc(p.ProjectName)}">${esc(p.ProjectName)}</b><small>${esc(p.ProjectID)} · ${esc(p.Status)}</small></div>
-      <div class="tl-track">${lines}${todayLine}
-        <div class="tl-bar" style="left:${left}%;width:${width}%" title="${esc(tip)}">
+      <div class="tl-track">${lines}${todayLine(idx === 0)}
+        <div class="tl-bar ${p.Progress >= 25 ? "on" : ""}" style="left:${left}%;width:${width}%" title="${esc(tip)}">
           <i class="bg" style="background:${col[h]}"></i><i class="fg" style="width:${p.Progress}%;background:${col[h]}"></i>
           <span class="pct">${p.Progress}%</span></div></div></div>`;
   }).join("");
@@ -708,7 +711,7 @@ async function enterDashboard(session, first) {
   document.body.classList.remove("locked");
   document.body.classList.toggle("portco-mode", session.role === "portco");
   $("viewBadge").textContent = session.role === "admin" ? "ADMIN · ALL PORTCOS" : session.name.toUpperCase();
-  $("pageTitle").textContent = session.role === "admin" ? "DASHBOARD" : `${session.name.toUpperCase()} DASHBOARD`;
+  $("pageTitle").textContent = session.role === "admin" ? "Portfolio Dashboard" : `${session.name} Dashboard`;
   if (first) { lastSignature = first.blob.ct; usingLocalFile = false; ingest(first.data, "Secure data"); }
   else await loadSecure(true);
 }

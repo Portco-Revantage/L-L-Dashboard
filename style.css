@@ -1,34 +1,40 @@
+/* ===== Revantage brand palette =====
+   Navy #031730 · Bronze #8E695B · Light Blue #4C759D · Medium Blue #18324D · Tan #F2ECE8 · Light Gray #F1F1F1
+   Bronze fills always carry white text (brand rule). Lighter bronze/blue tints are used for small text on navy
+   so it stays readable (WCAG AA). */
 :root{
-  --bg:#0E0E0E; --side:#141414; --card:#1B1B1B; --card-2:#232323; --line:#2B2B2B;
-  --gold:#E3C88B; --gold-2:#B8964A; --gold-3:#7A6332; --gold-hover:#EBD6A4;
-  --on-accent:#141414; --hover:#1E1E1E; --row-hover:#202020; --track:#333; --pill:#2A2A2A; --funnel-cell:#141414;
-  --accent-soft:rgba(227,200,139,.12);
-  --text:#F2F2F2; --muted:#8C8C8C;
-  --red:#E26D5F; --amber:#E7A94F; --green:#7CC49A; --grey:#5E5E5E;
+  --bg:#031730; --side:#021226; --card:#0B2340; --card-2:#18324D; --line:#24405E;
+  --gold:#D2B5A7; --gold-2:#8E695B; --gold-3:#4C759D; --gold-hover:#A17B6C;
+  --fill:#8E695B; --on-fill:#FFFFFF;
+  --on-accent:#031730; --hover:#0F2A47; --row-hover:#0F2A47; --track:#18324D; --pill:#18324D; --funnel-cell:#031730;
+  --accent-soft:rgba(142,105,91,.20);
+  --text:#F2ECE8; --muted:#9FB0C3;
+  --red:#E07A6F; --amber:#E3A857; --green:#6FC1A0; --grey:#6E8096;
+  --serif:"Cormorant Garamond","Georgia",serif; --bar-on:#031730;
 }
-/* ===== Light theme (original navy & white look) ===== */
+/* ===== Light theme: Tan background, Navy text, Bronze accents ===== */
 [data-theme="light"]{
-  --bg:#F4F6FA; --side:#FFFFFF; --card:#FFFFFF; --card-2:#F7F9FC; --line:#E3E7EF;
-  --gold:#2E5A8A; --gold-2:#1F3A5F; --gold-3:#7FA7D9; --gold-hover:#3D6FA6;
-  --on-accent:#FFFFFF; --hover:#EEF2F8; --row-hover:#FAFBFD; --track:#EEF2F8; --pill:#EEF2F8; --funnel-cell:#F0F3F8;
-  --accent-soft:#E8EFF8;
-  --text:#1D2433; --muted:#6B7385;
-  --red:#D64545; --amber:#E8A33D; --green:#2E9E6B; --grey:#9AA3B2;
+  --bg:#F2ECE8; --side:#031730; --card:#FFFFFF; --card-2:#F1F1F1; --line:#E2DAD4;
+  --gold:#7A5A4D; --gold-2:#8E695B; --gold-3:#4C759D; --gold-hover:#7A5A4D;
+  --fill:#8E695B; --on-fill:#FFFFFF;
+  --on-accent:#FFFFFF; --hover:#EFE8E3; --row-hover:#FAF7F5; --track:#E6E0DB; --pill:#F1F1F1; --funnel-cell:#F1F1F1;
+  --accent-soft:#F3E9E4;
+  --text:#031730; --muted:#5E6B7A;
+  --red:#B5473A; --amber:#8F5A0B; --green:#23735A; --grey:#8A96A3; --bar-on:#FFFFFF;
 }
-[data-theme="light"] .card,[data-theme="light"] .kpi{box-shadow:0 1px 3px rgba(0,0,0,.05)}
-[data-theme="light"] .sidebar{background:linear-gradient(180deg,#1F3A5F,#2E5A8A);border-right:none}
-[data-theme="light"] .sidebar .logo,[data-theme="light"] .sidebar .side-foot{color:#fff}
-[data-theme="light"] .sidebar .logo b{color:#BFD6F2}
-[data-theme="light"] .sidebar .logo .mark,[data-theme="light"] nav a.active{background:#fff;color:#1F3A5F}
-[data-theme="light"] nav a{color:rgba(255,255,255,.75)}
-[data-theme="light"] nav a:hover{background:rgba(255,255,255,.12);color:#fff}
-[data-theme="light"] nav hr{border-top-color:rgba(255,255,255,.2)}
-[data-theme="light"] .business,[data-theme="light"] .side-foot{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2)}
+[data-theme="light"] .card,[data-theme="light"] .kpi{box-shadow:0 1px 3px rgba(3,23,48,.06)}
+[data-theme="light"] h1,[data-theme="light"] .login-title{color:#031730}
+[data-theme="light"] .sidebar{background:#031730;border-right:none}
+[data-theme="light"] .sidebar .logo,[data-theme="light"] .sidebar .side-foot{color:#F2ECE8}
+[data-theme="light"] nav a{color:rgba(242,236,232,.75)}
+[data-theme="light"] nav a:hover{background:rgba(255,255,255,.08);color:#fff}
+[data-theme="light"] nav hr{border-top-color:rgba(255,255,255,.15)}
+[data-theme="light"] .business,[data-theme="light"] .side-foot{background:#18324D;border-color:#24405E}
 [data-theme="light"] .business select{color:#fff}
-[data-theme="light"] .business .bolt{color:#FFE08A}
-[data-theme="light"] .side-foot .small{color:rgba(255,255,255,.7)}
-[data-theme="light"] .business select option{background:#fff;color:#1D2433}
-[data-theme="light"] .f-stage.lead .t,[data-theme="light"] .f-stage.lead .s{color:#fff}
+[data-theme="light"] .business .bolt{color:#D2B5A7}
+[data-theme="light"] .side-foot .small{color:#9FB0C3}
+[data-theme="light"] .business select option{background:#fff;color:#031730}
+[data-theme="light"] .sidebar .wm-sub{color:#D2B5A7}
 
 /* Theme toggle switch */
 .theme-toggle{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:30px;padding:5px 6px;cursor:pointer;user-select:none}
@@ -37,7 +43,7 @@
 body,.card,.kpi,.sidebar,.topbar{transition:background-color .25s,color .25s,border-color .25s}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--text);font-family:"Manrope","Segoe UI",system-ui,sans-serif;font-size:14px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Figtree","Segoe UI",system-ui,sans-serif;font-size:14px}
 .app{display:flex;min-height:100vh}
 
 /* Sidebar */
@@ -47,7 +53,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:"Manrope","Sego
 .logo .mark{width:34px;height:34px;border-radius:10px;background:var(--gold);color:var(--on-accent);display:grid;place-items:center;font-size:13px;letter-spacing:0}
 .business{display:flex;align-items:center;gap:8px;background:var(--card-2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
 .business .bolt{color:var(--gold)}
-.business select{flex:1;background:transparent;border:none;color:var(--text);font:700 12px "Manrope",sans-serif;letter-spacing:.5px;outline:none;cursor:pointer}
+.business select{flex:1;background:transparent;border:none;color:var(--text);font:700 12px "Figtree",sans-serif;letter-spacing:.5px;outline:none;cursor:pointer}
 .business select option,.chip-select select option{background:var(--card-2);color:var(--text)}
 nav{display:flex;flex-direction:column;gap:4px}
 nav a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.6px;transition:.15s}
@@ -63,7 +69,7 @@ nav hr{border:none;border-top:1px solid var(--line);margin:10px 0}
 .topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:18px 0;position:sticky;top:0;background:var(--bg);z-index:5}
 .search{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:30px;padding:10px 18px;width:min(380px,100%)}
 .search span{color:var(--muted)}
-.search input{flex:1;background:transparent;border:none;color:var(--text);font:500 13px "Manrope",sans-serif;outline:none}
+.search input{flex:1;background:transparent;border:none;color:var(--text);font:500 13px "Figtree",sans-serif;outline:none}
 .top-actions{display:flex;align-items:center;gap:10px}
 .sync{font-size:11px;font-weight:600;padding:7px 12px;border-radius:20px;background:var(--card);border:1px solid var(--line)}
 .icon-btn{width:40px;height:40px;border-radius:50%;background:var(--card-2);border:1px solid var(--line);color:var(--text);display:grid;place-items:center;font-size:16px;cursor:pointer}
@@ -73,10 +79,10 @@ nav hr{border:none;border-top:1px solid var(--line);margin:10px 0}
 .page-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;margin:6px 0 18px}
 h1{margin:0;color:var(--gold);font-size:22px;font-weight:800;letter-spacing:.5px}
 .head-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.chip-select select{background:var(--card-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 12px;font:600 12px "Manrope",sans-serif;outline:none;cursor:pointer}
-.ghost-btn{background:var(--card-2);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:9px 12px;font:600 12px "Manrope",sans-serif;cursor:pointer}
+.chip-select select{background:var(--card-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 12px;font:600 12px "Figtree",sans-serif;outline:none;cursor:pointer}
+.ghost-btn{background:var(--card-2);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:9px 12px;font:600 12px "Figtree",sans-serif;cursor:pointer}
 .ghost-btn:hover{color:var(--text)}
-.gold-btn{background:var(--gold);color:var(--on-accent);border-radius:8px;padding:9px 16px;font:800 12px "Manrope",sans-serif;cursor:pointer}
+.gold-btn{background:var(--gold);color:var(--on-accent);border-radius:8px;padding:9px 16px;font:800 12px "Figtree",sans-serif;cursor:pointer}
 .gold-btn:hover{background:var(--gold-hover)}
 
 /* KPIs */
@@ -191,7 +197,7 @@ body.portco-mode .admin-only{display:none !important}
 .x{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}
 .modal-sub{margin:18px 0 14px;font-size:12px;font-weight:800;letter-spacing:1.2px;color:var(--muted)}
 .m-label{display:block;font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text)}
-.pin-input,.pass-input{width:100%;background:var(--card-2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;color:var(--text);font:700 18px "Manrope",sans-serif;outline:none}
+.pin-input,.pass-input{width:100%;background:var(--card-2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;color:var(--text);font:700 18px "Figtree",sans-serif;outline:none}
 .pin-input{font-size:30px;letter-spacing:22px;text-align:center}
 .pin-input:focus,.pass-input:focus{border-color:var(--gold)}
 .m-error{min-height:20px;color:var(--red);font-size:13px;font-weight:600;margin:10px 0 4px}
@@ -229,7 +235,7 @@ mark.hl{background:var(--gold);color:var(--on-accent);border-radius:3px;padding:
 .chip.sel{border-color:var(--gold);color:var(--gold)}
 .chip button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:50%}
 .chip button:hover{color:var(--red)}
-.fb-clear{margin-left:auto;background:none;border:none;color:var(--gold);font:700 12px "Manrope",sans-serif;cursor:pointer}
+.fb-clear{margin-left:auto;background:none;border:none;color:var(--gold);font:700 12px "Figtree",sans-serif;cursor:pointer}
 
 /* ===== Portco-only sections, timeline, attention, insights ===== */
 body:not(.portco-mode) .portco-only{display:none !important}
@@ -280,3 +286,25 @@ body:not(.portco-mode) .portco-only{display:none !important}
 .ins .n{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chart-box.small{height:170px}
 @media (max-width:700px){.health-list,.insights{grid-template-columns:1fr}.tl-head,.tl-row{grid-template-columns:150px 1fr}}
+
+/* ===== Revantage branding: bronze fills with white text, serif headlines ===== */
+.gold-btn,nav a.active,.logo .mark,.theme-toggle span.on,.view-badge,.login-item.admin .li-icon,.avatar{background:var(--fill) !important;color:var(--on-fill) !important}
+.gold-btn:hover{background:var(--gold-hover) !important}
+.f-stage .fill{background:var(--fill)}
+.f-stage.lead .t,.f-stage.lead .s{color:var(--on-fill) !important}
+mark.hl{background:var(--fill);color:var(--on-fill)}
+h1,.login-title{font-family:var(--serif);font-weight:600;letter-spacing:.2px}
+h1{font-size:30px;text-transform:none}
+.login-title{font-size:40px}
+.logo{letter-spacing:0;gap:12px}
+.logo .mark{font-family:var(--serif);font-size:20px;font-weight:700;border-radius:8px}
+.wm{display:flex;flex-direction:column;line-height:1.05}
+.wm-name{font-family:var(--serif);font-size:22px;font-weight:600;letter-spacing:.3px}
+.wm-sub{font-size:9.5px;font-weight:700;letter-spacing:1.6px;color:var(--gold);margin-top:3px}
+.card-h{letter-spacing:1px}
+.kpi{border-top:3px solid var(--fill)}
+.kpi.red{border-top-color:var(--red)} .kpi.amber{border-top-color:var(--amber)}
+.dot.plan{background:var(--gold-3)}
+.tl-today span{top:-14px}
+.tl-grid{padding-top:6px}
+.tl-bar.on .pct{color:var(--bar-on)}
