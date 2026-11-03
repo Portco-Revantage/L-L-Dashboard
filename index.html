@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PortCo Learning Hub | Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script>try{var t=localStorage.getItem("plh-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="locked">
+
+<!-- ===== Login: choose your PortCo ===== -->
+<div id="loginScreen" class="login">
+  <div class="login-bar">
+    <div class="logo"><span class="mark">PL</span><span>PORTCO<b>HUB</b></span></div>
+    <div class="theme-toggle" id="loginTheme" title="Switch theme"><span data-t="dark">&#9790; Dark</span><span data-t="light">&#9728; Light</span></div>
+  </div>
+  <div class="login-box">
+    <h1 class="login-title">Select your PortCo</h1>
+    <p class="login-sub">Choose your company to view the status of your learning projects.
+      You'll be asked for your company's PIN.</p>
+    <p class="login-note" id="loginNote"></p>
+    <div class="search login-search"><span>&#9906;</span><input id="pcSearch" type="search" placeholder="Search portco" /></div>
+    <div class="login-label">PORTCOS</div>
+    <div id="pcList" class="login-list"><div class="empty">Loading…</div></div>
+    <div class="login-label">REVANTAGE TEAM</div>
+    <button class="login-item admin" id="adminItem">
+      <span class="li-icon">&#9881;</span>
+      <span class="li-text"><b>Admin login</b><small>See all portcos and the overall dashboard</small></span>
+      <span class="li-go">&#8250;</span>
+    </button>
+  </div>
+</div>
+
+<!-- ===== PIN / password pop-up ===== -->
+<div id="pinModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="modal-card">
+    <div class="modal-h"><h2 id="mTitle">Enter your PIN</h2><button id="mClose" class="x" aria-label="Close">&#10005;</button></div>
+    <div class="modal-sub" id="mSub">PORTCO</div>
+    <label class="m-label" id="mLabel" for="pinInput">PIN</label>
+    <input id="pinInput" class="pin-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••" />
+    <input id="adminInput" class="pass-input" type="password" autocomplete="current-password" placeholder="Admin password" hidden />
+    <div class="m-error" id="mError" aria-live="polite"></div>
+    <div class="modal-actions">
+      <button id="mCancel" class="ghost-btn">Cancel</button>
+      <button id="mGo" class="gold-btn">Unlock &amp; view</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="logo"><span class="mark">PL</span><span>PORTCO<b>HUB</b></span></div>
+
+    <div class="business admin-only">
+      <span class="bolt">&#9889;</span>
+      <select id="fPortco"><option value="">ALL PORTCOS</option></select>
+    </div>
+
+    <nav>
+      <a href="#top" class="active"><i>&#9638;</i>DASHBOARD</a>
+      <a href="#sec-portcos"><i>&#9673;</i>PORTCOS</a>
+      <a href="#sec-projects"><i>&#9776;</i>PROJECTS</a>
+      <a href="#sec-comms"><i>&#9993;</i>COMMUNICATIONS</a>
+      <a href="#sec-files"><i>&#128196;</i>FILES</a>
+      <hr />
+      <a href="#sec-workload"><i>&#9881;</i>WORKLOAD</a>
+    </nav>
+
+    <div class="side-foot">
+      <div class="small">Data source</div>
+      <div id="sourceName">data.xlsx</div>
+      <div class="small">Last synced <span id="lastRefresh">–</span></div>
+    </div>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <div class="main" id="top">
+    <header class="topbar">
+      <div class="search"><span>&#9906;</span><input id="fSearch" type="search" placeholder="Search project name or ID" /></div>
+      <div class="top-actions">
+        <div class="theme-toggle" id="themeToggle" title="Switch theme"><span data-t="dark">&#9790; Dark</span><span data-t="light">&#9728; Light</span></div>
+        <span id="viewBadge" class="view-badge"></span>
+        <span id="syncStatus" class="sync">Loading…</span>
+        <button id="refreshBtn" class="icon-btn" title="Reload data.xlsx">&#8635;</button>
+        <label class="icon-btn admin-only" title="Load an Excel file from your computer">&#8679;<input type="file" id="fileInputTop" accept=".xlsx,.xls" hidden /></label>
+        <button id="logoutBtn" class="ghost-btn logout">&#9099; Log out</button>
+      </div>
+    </header>
+
+    <section class="page-head">
+      <h1 id="pageTitle">DASHBOARD</h1>
+      <div class="head-actions">
+        <div class="chip-select"><select id="fStatus"><option value="">All statuses</option></select></div>
+        <div class="chip-select"><select id="fOwner"><option value="">All owners</option></select></div>
+        <button id="clearBtn" class="ghost-btn">&#10005; Clear</button>
+        <label class="gold-btn admin-only">&#8853; Load Excel<input type="file" id="fileInput" accept=".xlsx,.xls" hidden /></label>
+      </div>
+    </section>
+
+    <section class="kpis" id="kpis"></section>
+
+    <!-- Row 1 -->
+    <section class="row r3">
+      <div class="card">
+        <div class="card-h">PROJECT STATUS</div>
+        <div class="card-b donut-split">
+          <div class="donut-box"><canvas id="statusChart"></canvas><div class="center" id="statusCenter">0</div></div>
+          <ul class="legend" id="statusLegend"></ul>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h">PROJECTS PER PORTCO</div>
+        <div class="card-b"><div class="chart-box"><canvas id="portcoChart"></canvas></div>
+          <div class="stat-foot"><span>Active projects</span><b id="activeTotal">0</b></div></div>
+      </div>
+      <div class="card">
+        <div class="card-h">DELIVERY RATE</div>
+        <div class="card-b">
+          <div class="gauge-box"><canvas id="deliveryChart"></canvas><div class="center big" id="deliveryCenter">0%</div></div>
+          <div class="stat-foot"><span>Delivered</span><b id="deliveredOf">0 of 0</b></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Row 2 -->
+    <section class="row r2">
+      <div class="card">
+        <div class="card-h">CONTENT PIPELINE <span class="sub">script &rarr; delivery</span></div>
+        <div class="card-b">
+          <div class="funnel-head"><span>Stage</span><span>Projects</span><span>Share</span></div>
+          <div id="funnel"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h">COMMUNICATIONS PER MONTH</div>
+        <div class="card-b"><div class="chart-box tall"><canvas id="commsChart"></canvas></div></div>
+      </div>
+    </section>
+
+    <!-- Portcos -->
+    <section class="card" id="sec-portcos">
+      <div class="card-h">PORTCO OVERVIEW <span class="sub">click a portco to filter</span></div>
+      <div class="card-b"><div id="portcoCards" class="portco-cards"></div></div>
+    </section>
+
+    <!-- Projects -->
+    <section class="card" id="sec-projects">
+      <div class="card-h">PROJECT STATUS TRACKER</div>
+      <div class="card-b">
+        <div class="table-wrap">
+          <table id="projectTable">
+            <thead><tr><th>Health</th><th>Project</th><th>Portco</th><th>Type</th><th>Owner</th><th>Status</th><th>Progress</th><th>Due date</th><th>Feedback</th><th>Priority</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="rag">
+          <span><i class="dot red"></i>Overdue</span><span><i class="dot amber"></i>At risk (due ≤ 7 days, &lt; 70%)</span>
+          <span><i class="dot green"></i>On track</span><span><i class="dot gold"></i>Delivered</span><span><i class="dot grey"></i>On hold</span>
+        </p>
+      </div>
+    </section>
+
+    <section class="row r2">
+      <div class="card" id="sec-comms">
+        <div class="card-h">RECENT COMMUNICATIONS</div>
+        <div class="card-b"><div class="table-wrap short">
+          <table id="commsTable"><thead><tr><th>Date</th><th>Portco</th><th>Project</th><th>Type</th><th>Direction</th><th>Subject</th></tr></thead><tbody></tbody></table>
+        </div></div>
+      </div>
+      <div class="card" id="sec-files">
+        <div class="card-h">FILES STORED</div>
+        <div class="card-b"><div class="table-wrap short">
+          <table id="filesTable"><thead><tr><th>File</th><th>Portco</th><th>Type</th><th>Version</th><th>Uploaded</th></tr></thead><tbody></tbody></table>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="card" id="sec-workload">
+      <div class="card-h">WORKLOAD BY ID OWNER <span class="sub">active projects</span></div>
+      <div class="card-b"><div class="chart-box"><canvas id="ownerChart"></canvas></div></div>
+    </section>
+
+    <footer>PortCo Learning Hub &middot; numbers update automatically from data.xlsx</footer>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

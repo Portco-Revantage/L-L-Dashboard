@@ -1,0 +1,44 @@
+{
+  "board_ids": [],
+  "project_id_column": ["Project ID", "ProjectID", "ID"],
+  "columns": {
+    "PortcoName":     ["Portco", "PortCo", "Portco Name", "Client", "Company"],
+    "ContentType":    ["Content Type", "Type", "Format"],
+    "IDOwner":        ["ID Owner", "Owner", "Person", "Assignee", "Designer"],
+    "Status":         ["Status", "Stage"],
+    "ScriptReceived": ["Script Received", "Script Date", "Request Date"],
+    "StartDate":      ["Start Date", "Start"],
+    "DueDate":        ["Due Date", "Due", "Deadline", "Timeline", "Date"],
+    "Progress":       ["Progress", "% Complete", "Completion"],
+    "FeedbackRounds": ["Feedback Rounds", "Feedback", "Review Rounds"],
+    "Priority":       ["Priority"]
+  },
+  "use_group_name_as_portco_if_no_column": true,
+  "status_map": {
+    "Done": "Delivered",
+    "Completed": "Delivered",
+    "Delivered": "Delivered",
+    "Working on it": "In Development",
+    "In Progress": "In Development",
+    "In Development": "In Development",
+    "Review": "In Review",
+    "In Review": "In Review",
+    "Waiting for client": "Portco Feedback",
+    "Client Feedback": "Portco Feedback",
+    "Portco Feedback": "Portco Feedback",
+    "Stuck": "On Hold",
+    "On Hold": "On Hold",
+    "Not Started": "Script Received",
+    "Script Received": "Script Received",
+    "": "Script Received"
+  },
+  "progress_by_status": {
+    "Script Received": 5,
+    "In Development": 45,
+    "In Review": 75,
+    "Portco Feedback": 85,
+    "Delivered": 100,
+    "On Hold": 30
+  },
+  "include_updates_as_communications": true
+}
