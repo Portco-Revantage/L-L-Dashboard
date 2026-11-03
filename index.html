@@ -67,7 +67,9 @@
 
     <nav>
       <a href="#top" class="active"><i>&#9638;</i>DASHBOARD</a>
-      <a href="#sec-portcos"><i>&#9673;</i>PORTCOS</a>
+      <a href="#sec-portcos" class="admin-only"><i>&#9673;</i>PORTCOS</a>
+      <a href="#sec-timeline"><i>&#9636;</i>TIMELINE</a>
+      <a href="#sec-attention"><i>&#9888;</i>ATTENTION</a>
       <a href="#sec-projects"><i>&#9776;</i>PROJECTS</a>
       <a href="#sec-comms"><i>&#9993;</i>COMMUNICATIONS</a>
       <a href="#sec-files"><i>&#128196;</i>FILES</a>
@@ -123,10 +125,18 @@
           <ul class="legend" id="statusLegend"></ul>
         </div>
       </div>
-      <div class="card">
+      <div class="card admin-only">
         <div class="card-h">PROJECTS PER PORTCO</div>
         <div class="card-b"><div class="chart-box"><canvas id="portcoChart"></canvas></div>
           <div class="stat-foot"><span>Active projects</span><b id="activeTotal">0</b></div></div>
+      </div>
+      <div class="card portco-only">
+        <div class="card-h">PROJECT HEALTH <span class="sub">where things stand today</span></div>
+        <div class="card-b">
+          <div class="health-score"><b id="healthScore">–</b><span id="healthScoreNote">of active projects on track</span></div>
+          <div class="health-bar" id="healthBar"></div>
+          <ul class="health-list" id="healthList"></ul>
+        </div>
       </div>
       <div class="card">
         <div class="card-h">DELIVERY RATE</div>
@@ -152,8 +162,29 @@
       </div>
     </section>
 
+    <!-- Timeline -->
+    <section class="card" id="sec-timeline">
+      <div class="card-h">PROJECT TIMELINE <span class="sub">start &rarr; finish, bar fill = % complete</span></div>
+      <div class="card-b"><div id="timeline" class="timeline"></div></div>
+    </section>
+
+    <!-- Attention & insights -->
+    <section class="row r2">
+      <div class="card" id="sec-attention">
+        <div class="card-h">NEEDS ATTENTION <span class="sub">what to act on first</span></div>
+        <div class="card-b"><ul id="attention" class="attention"></ul></div>
+      </div>
+      <div class="card">
+        <div class="card-h">DELIVERY INSIGHTS <span class="sub">completed projects</span></div>
+        <div class="card-b">
+          <div class="insights" id="insights"></div>
+          <div class="chart-box small"><canvas id="deliveredChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+
     <!-- Portcos -->
-    <section class="card" id="sec-portcos">
+    <section class="card admin-only" id="sec-portcos">
       <div class="card-h">PORTCO OVERVIEW <span class="sub">click a portco to filter</span></div>
       <div class="card-b"><div id="portcoCards" class="portco-cards"></div></div>
     </section>

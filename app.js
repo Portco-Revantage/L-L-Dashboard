@@ -188,6 +188,10 @@ function render() {
   renderComms(comms);
   renderOwner(projects);
   renderPortcoCards();
+  renderHealth(projects);
+  renderTimeline(projects);
+  renderAttention(projects);
+  renderInsights(projects);
   renderProjectTable(projects);
   renderCommsTable(comms);
   renderFilesTable(files);
@@ -208,6 +212,8 @@ function renderKPIs(projects, comms, files) {
     ["FILES STORED", files.length, "scripts → final content", ""],
     ["AVG FEEDBACK ROUNDS", avgFb, "per project", "gold"]
   ];
+  // The Portcos count only makes sense for admin – a portco only ever sees itself
+  if (SESSION && SESSION.role === "portco") k.splice(k.findIndex(x => x[0] === "PORTCOS"), 1);
   $("kpis").innerHTML = k.map(([l, v, n, c]) => `<div class="kpi ${c}"><div class="l">${l}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join("");
 }
 
@@ -356,6 +362,112 @@ function renderFilesTable(files) {
 
 const shorten = (s) => String(s).length > 20 ? String(s).slice(0, 19) + "…" : s;
 function esc(v) { return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+/* ---------- Health, timeline, attention, insights ---------- */
+const DAY = 86400000;
+const daysBetween = (a, b) => Math.round((b - a) / DAY);
+const isActive = (p) => !isClosed(p);
+
+function renderHealth(projects) {
+  // "Not scheduled" = active but no dates, so it can't honestly be called on track
+  const cat = (p) => (isActive(p) && !p.DueDate) ? "plan" : health(p);
+  const order = [["red", "Overdue"], ["amber", "At risk"], ["green", "On track"], ["plan", "Not scheduled"], ["grey", "On hold"], ["gold", "Delivered"]];
+  const n = (h) => projects.filter(p => cat(p) === h).length;
+  const total = projects.length || 1;
+  const col = { ...HEALTH_COLOR_NOW(), plan: C.gold3 };
+  $("healthBar").innerHTML = order.map(([h, l]) => n(h) ? `<i style="width:${n(h) / total * 100}%;background:${col[h]}" title="${l}: ${n(h)}"></i>` : "").join("");
+  $("healthList").innerHTML = order.map(([h, l]) => `<li><i class="dot ${h === "plan" ? "" : h}" style="${h === "plan" ? `background:${col.plan}` : ""}"></i>${l}<b>${n(h)}</b></li>`).join("");
+  const scheduled = projects.filter(p => isActive(p) && p.DueDate && health(p) !== "grey");
+  const ok = scheduled.filter(p => health(p) === "green").length;
+  const unsched = n("plan");
+  $("healthScore").textContent = scheduled.length ? `${Math.round(ok / scheduled.length * 100)}%` : "–";
+  $("healthScoreNote").textContent = scheduled.length
+    ? `of scheduled active projects on track (${ok} of ${scheduled.length})${unsched ? ` · ${unsched} not scheduled` : ""}`
+    : (unsched ? `${unsched} active project${unsched === 1 ? " has" : "s have"} no dates yet` : "no active projects right now");
+}
+const HEALTH_COLOR_NOW = () => ({ gold: C.gold, green: C.green, amber: C.amber, red: C.red, grey: C.grey });
+
+function renderTimeline(projects) {
+  const box = $("timeline");
+  const dated = projects.filter(p => p.StartDate && p.DueDate).sort((a, b) => a.StartDate - b.StartDate);
+  const undated = projects.filter(p => !(p.StartDate && p.DueDate));
+  if (!dated.length) {
+    box.innerHTML = `<div class="empty">No project has start and end dates yet.</div>` + unschedNote(undated);
+    return;
+  }
+  const t = today();
+  let min = new Date(Math.min(...dated.map(p => p.StartDate)));
+  let max = new Date(Math.max(t, ...dated.map(p => p.DueDate)));
+  min = new Date(min.getFullYear(), min.getMonth(), 1);
+  max = new Date(max.getFullYear(), max.getMonth() + 1, 1);
+  const span = max - min;
+  const pos = (d) => ((d - min) / span * 100);
+  const months = [];
+  for (let d = new Date(min); d < max; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) months.push(new Date(d));
+  const head = months.map(m => `<span style="left:${pos(m)}%">${m.toLocaleDateString("en-GB", { month: "short", year: "2-digit" }).toUpperCase()}</span>`).join("");
+  const lines = months.map(m => `<i class="tl-vline" style="left:${pos(m)}%"></i>`).join("");
+  const todayLine = `<i class="tl-today" style="left:${pos(t)}%"><span>TODAY</span></i>`;
+  const col = HEALTH_COLOR_NOW();
+  const rows = dated.map(p => {
+    const h = health(p), left = pos(p.StartDate), width = Math.max(pos(p.DueDate) - left, 0.8);
+    const tip = `${p.ProjectName}\n${fmt(p.StartDate)} → ${fmt(p.DueDate)} (${daysBetween(p.StartDate, p.DueDate)} days)\n${p.Status} · ${p.Progress}% complete · ${HEALTH_LABEL[h]}`;
+    return `<div class="tl-row"><div class="tl-label"><b title="${esc(p.ProjectName)}">${esc(p.ProjectName)}</b><small>${esc(p.ProjectID)} · ${esc(p.Status)}</small></div>
+      <div class="tl-track">${lines}${todayLine}
+        <div class="tl-bar" style="left:${left}%;width:${width}%" title="${esc(tip)}">
+          <i class="bg" style="background:${col[h]}"></i><i class="fg" style="width:${p.Progress}%;background:${col[h]}"></i>
+          <span class="pct">${p.Progress}%</span></div></div></div>`;
+  }).join("");
+  box.innerHTML = `<div class="tl-grid"><div class="tl-head"><span>PROJECT</span><div class="tl-months">${head}</div></div>${rows}</div>` + unschedNote(undated);
+}
+function unschedNote(list) {
+  return list.length ? `<div class="tl-unsched">Not scheduled yet (no dates on the plan): <b>${list.map(p => esc(p.ProjectName)).join(", ")}</b></div>` : "";
+}
+
+function renderAttention(projects) {
+  const t = today(), items = [];
+  projects.forEach(p => {
+    const h = health(p);
+    if (h === "red") items.push({ cls: "red", rank: 0, tag: "OVERDUE", p,
+      s: `Due ${fmt(p.DueDate)} · ${daysBetween(p.DueDate, t)} days overdue · ${p.Progress}% complete · ${p.Status}` });
+    else if (h === "amber") items.push({ cls: "amber", rank: 1, tag: "AT RISK", p,
+      s: `Due in ${daysBetween(t, p.DueDate)} days · only ${p.Progress}% complete` });
+    else if (h === "grey") items.push({ cls: "grey", rank: 2, tag: "ON HOLD", p, s: `${p.Progress}% complete when paused` });
+    if (isActive(p) && !p.DueDate) items.push({ cls: "plan", rank: 3, tag: "NO DATES", p,
+      s: `${p.Status} · no start or end date on the plan, so it can't be tracked for delays` });
+    else if (isActive(p) && p.Progress === 0 && p.ScriptReceived && daysBetween(p.ScriptReceived, t) > 14) items.push({ cls: "plan", rank: 3, tag: "NOT STARTED", p,
+      s: `Script received ${daysBetween(p.ScriptReceived, t)} days ago, no progress yet` });
+  });
+  items.sort((a, b) => a.rank - b.rank);
+  $("attention").innerHTML = items.length
+    ? items.map(i => `<li class="${i.cls}"><div><div class="a-t">${esc(i.p.ProjectName)}</div><div class="a-s">${i.s}</div></div><span class="a-tag">${i.tag}</span></li>`).join("")
+    : `<li class="ok">Nothing needs attention right now — every active project is on track.</li>`;
+}
+
+function renderInsights(projects) {
+  const t = today();
+  const done = projects.filter(p => health(p) === "gold" && p.ScriptReceived && p.DueDate)
+    .map(p => ({ p, d: daysBetween(p.ScriptReceived, p.DueDate) })).filter(x => x.d >= 0);   // skip rows with dates the wrong way round
+  const avg = done.length ? Math.round(done.reduce((a, x) => a + x.d, 0) / done.length) : null;
+  const fast = done.length ? done.reduce((a, b) => (b.d < a.d ? b : a)) : null;
+  const slow = done.length ? done.reduce((a, b) => (b.d > a.d ? b : a)) : null;
+  const recent = projects.filter(p => health(p) === "gold" && p.DueDate && daysBetween(p.DueDate, t) <= 90).length;
+  const card = (l, v, n) => `<div class="ins"><div class="l">${l}</div><div class="v">${v}</div><div class="n" title="${esc(n)}">${esc(n)}</div></div>`;
+  $("insights").innerHTML = [
+    card("AVG DAYS TO DELIVER", avg !== null ? avg : "–", "script received → completed"),
+    card("DELIVERED · LAST 90 DAYS", recent, "completed projects"),
+    card("FASTEST", fast ? `${fast.d} days` : "–", fast ? fast.p.ProjectName : ""),
+    card("LONGEST", slow ? `${slow.d} days` : "–", slow ? slow.p.ProjectName : "")
+  ].join("");
+  const by = {};
+  projects.filter(p => health(p) === "gold" && p.DueDate).forEach(p => {
+    const k = `${p.DueDate.getFullYear()}-${String(p.DueDate.getMonth() + 1).padStart(2, "0")}`; by[k] = (by[k] || 0) + 1; });
+  const m = Object.keys(by).sort();
+  drawChart("deliveredChart", "bar", {
+    labels: m.map(k => new Date(k + "-01").toLocaleDateString("en-GB", { month: "short", year: "2-digit" })),
+    datasets: [{ label: "Projects delivered", data: m.map(k => by[k]), backgroundColor: C.gold, borderRadius: 6, maxBarThickness: 40 }]
+  }, { scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: C.line } }, x: { grid: { display: false } } },
+       plugins: { legend: { display: false }, title: { display: true, text: "Projects delivered per month", color: C.muted, font: { size: 11 } } } });
+}
 
 /* ---------- Search suggestions & active-filter bar ---------- */
 let sugIndex = -1, sugItems = [];

@@ -230,3 +230,53 @@ mark.hl{background:var(--gold);color:var(--on-accent);border-radius:3px;padding:
 .chip button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:50%}
 .chip button:hover{color:var(--red)}
 .fb-clear{margin-left:auto;background:none;border:none;color:var(--gold);font:700 12px "Manrope",sans-serif;cursor:pointer}
+
+/* ===== Portco-only sections, timeline, attention, insights ===== */
+body:not(.portco-mode) .portco-only{display:none !important}
+.health-score{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
+.health-score b{font-size:40px;font-weight:800;color:var(--gold);line-height:1}
+.health-score span{font-size:12px;color:var(--muted)}
+.health-bar{display:flex;height:12px;border-radius:8px;overflow:hidden;background:var(--track);margin-bottom:16px}
+.health-bar i{display:block;height:100%}
+.health-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:12.5px}
+.health-list li{display:flex;align-items:center;gap:8px}
+.health-list b{margin-left:auto;font-size:15px}
+
+.timeline{position:relative;overflow-x:auto}
+.tl-grid{position:relative;min-width:720px}
+.tl-head,.tl-row{display:grid;grid-template-columns:250px 1fr;align-items:center}
+.tl-head{font-size:10.5px;font-weight:700;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:6px}
+.tl-months{position:relative;height:16px}
+.tl-months span{position:absolute;top:0;transform:translateX(2px);white-space:nowrap}
+.tl-row{min-height:42px;border-bottom:1px dashed var(--line)}
+.tl-row:last-child{border-bottom:none}
+.tl-label{padding-right:14px;overflow:hidden}
+.tl-label b{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-label small{font-size:11px;color:var(--muted)}
+.tl-track{position:relative;height:42px}
+.tl-bar{position:absolute;top:12px;height:18px;border-radius:9px;overflow:hidden;min-width:8px;cursor:default;opacity:.95}
+.tl-bar .bg{position:absolute;inset:0;opacity:.35}
+.tl-bar .fg{position:absolute;inset:0 auto 0 0}
+.tl-bar .pct{position:relative;font-size:10.5px;font-weight:800;line-height:18px;padding:0 8px;color:var(--text);white-space:nowrap}
+.tl-today{position:absolute;top:0;bottom:0;width:2px;background:var(--red);opacity:.8;pointer-events:none}
+.tl-today span{position:absolute;top:-2px;left:4px;font-size:10px;font-weight:800;color:var(--red);white-space:nowrap}
+.tl-vline{position:absolute;top:0;bottom:0;width:1px;background:var(--line);pointer-events:none}
+.tl-unsched{margin-top:14px;font-size:12px;color:var(--muted)}
+.tl-unsched b{color:var(--text)}
+
+.attention{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.attention li{display:flex;gap:12px;align-items:flex-start;background:var(--card-2);border:1px solid var(--line);border-left:4px solid var(--grey);border-radius:10px;padding:12px 14px}
+.attention li.red{border-left-color:var(--red)} .attention li.amber{border-left-color:var(--amber)} .attention li.grey{border-left-color:var(--grey)} .attention li.plan{border-left-color:var(--gold-3)}
+.attention .a-t{font-weight:700;font-size:13px}
+.attention .a-s{font-size:12px;color:var(--muted);margin-top:3px}
+.attention .a-tag{margin-left:auto;font-size:10.5px;font-weight:800;letter-spacing:.5px;white-space:nowrap;padding:4px 9px;border-radius:12px;background:var(--pill)}
+.attention li.red .a-tag{color:var(--red)} .attention li.amber .a-tag{color:var(--amber)} .attention li.plan .a-tag{color:var(--gold)}
+.attention .ok{border-left-color:var(--green);color:var(--green);font-weight:700}
+
+.insights{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.ins{background:var(--card-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.ins .l{font-size:10.5px;font-weight:700;letter-spacing:.6px;color:var(--muted)}
+.ins .v{font-size:22px;font-weight:800;color:var(--gold);margin-top:4px}
+.ins .n{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chart-box.small{height:170px}
+@media (max-width:700px){.health-list,.insights{grid-template-columns:1fr}.tl-head,.tl-row{grid-template-columns:150px 1fr}}
