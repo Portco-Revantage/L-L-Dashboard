@@ -42,8 +42,10 @@
     <div class="modal-h"><h2 id="mTitle">Enter your PIN</h2><button id="mClose" class="x" aria-label="Close">&#10005;</button></div>
     <div class="modal-sub" id="mSub">PORTCO</div>
     <label class="m-label" id="mLabel" for="pinInput">PIN</label>
+    <div class="m-hint">Opens automatically when the code is correct</div>
     <input id="pinInput" class="pin-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••" />
     <input id="adminInput" class="pass-input" type="password" autocomplete="current-password" placeholder="Admin password" hidden />
+    <div class="m-check" id="mCheck" aria-live="polite"></div>
     <div class="m-error" id="mError" aria-live="polite"></div>
     <div class="modal-actions">
       <button id="mCancel" class="ghost-btn">Cancel</button>

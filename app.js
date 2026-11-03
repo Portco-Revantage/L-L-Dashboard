@@ -407,10 +407,11 @@ function openModal(target) {
   $("pinInput").hidden = admin; $("adminInput").hidden = !admin;
   $("pinInput").value = ""; $("adminInput").value = ""; $("mError").textContent = "";
   $("pinModal").classList.remove("hidden");
+  getBlob(target.file).catch(() => {});   // load early so the check is instant
   setTimeout(() => (admin ? $("adminInput") : $("pinInput")).focus(), 50);
   checkLock();
 }
-function closeModal() { $("pinModal").classList.add("hidden"); pending = null; }
+function closeModal() { $("pinModal").classList.add("hidden"); pending = null; clearTimeout(autoTimer); setChecking(false); }
 
 function lockState() { try { return JSON.parse(sessionStorage.getItem("plh-lock") || "{}"); } catch (e) { return {}; } }
 function checkLock() {
@@ -434,32 +435,66 @@ function recordFail() {
   return LOCK.max - st.n;
 }
 
-async function submitLogin() {
-  if (!pending || checkLock()) return;
+/* Unlocks as soon as the right code is typed – no need to press "Unlock & view".
+   While typing, each code is checked quietly (no error, no attempt used). A wrong PIN only
+   counts once all 4 digits are typed, or when Enter / the button is pressed. */
+const blobCache = {};
+let checkSeq = 0, autoTimer = null;
+
+async function getBlob(file) {
+  if (!blobCache[file]) blobCache[file] = fetchEnc(file).catch(e => { delete blobCache[file]; throw e; });
+  return blobCache[file];
+}
+
+function scheduleAutoCheck() {
+  clearTimeout(autoTimer);
+  if (!pending) return;
   const admin = pending.role === "admin";
+  const value = admin ? $("adminInput").value : $("pinInput").value;
+  $("mError").textContent = "";
+  if (!value) { setChecking(false); return; }
+  if (!admin && value.length === 4) { submitLogin(); return; }   // full PIN: real attempt
+  autoTimer = setTimeout(() => submitLogin({ silent: true }), admin ? 450 : 250);
+}
+
+function setChecking(on) {
+  $("mCheck").textContent = on ? "Checking…" : "";
+}
+
+async function submitLogin(opts = {}) {
+  const silent = !!opts.silent;
+  if (!pending || checkLock()) return;
+  const target = pending;
+  const admin = target.role === "admin";
   const secret = admin ? $("adminInput").value : $("pinInput").value.trim();
-  if (!admin && !/^\d{1,4}$/.test(secret)) { $("mError").textContent = "PIN must be 1–4 digits."; return; }
-  if (admin && !secret) { $("mError").textContent = "Enter the admin password."; return; }
-  $("mGo").disabled = true; $("mGo").textContent = "Verifying…"; $("mError").textContent = "";
+  if (!admin && !/^\d{1,4}$/.test(secret)) { if (!silent) $("mError").textContent = "PIN must be 1–4 digits."; return; }
+  if (admin && !secret) { if (!silent) $("mError").textContent = "Enter the admin password."; return; }
+  const seq = ++checkSeq;
+  setChecking(true);
+  if (!silent) { $("mGo").disabled = true; $("mGo").textContent = "Verifying…"; $("mError").textContent = ""; }
   try {
-    const blob = await fetchEnc(pending.file);
+    const blob = await getBlob(target.file);
     const key = await deriveKey(secret, blob.salt, blob.iter);
     const data = await decryptWith(key, blob);
-    const all = lockState(); delete all[pending.id]; sessionStorage.setItem("plh-lock", JSON.stringify(all));
-    await enterDashboard({ ...pending, key }, { data, blob });
+    if (pending !== target) return;                      // pop-up was closed meanwhile
+    const all = lockState(); delete all[target.id]; sessionStorage.setItem("plh-lock", JSON.stringify(all));
+    await enterDashboard({ ...target, key }, { data, blob });
     closeModal();
   } catch (e) {
-    if (String(e.name) !== "OperationError") console.warn(e);
+    if (seq !== checkSeq || pending !== target) return;  // a newer check is running
     if (String(e.name) === "OperationError") {
+      if (silent) return;                                // quiet check: keep typing
       const left = recordFail();
       $("mError").textContent = admin ? "Incorrect password." : `Incorrect PIN.${left < LOCK.max && left > 0 ? ` ${left} attempt${left === 1 ? "" : "s"} left.` : ""}`;
+      if (!admin) { $("pinInput").value = ""; $("pinInput").focus(); }
       checkLock();
     } else {
+      console.warn(e);
       $("mError").textContent = "Couldn't reach the dashboard data. Check your connection and try again.";
     }
   } finally {
-    $("mGo").textContent = "Unlock & view";
-    if (!checkLock()) $("mGo").disabled = false;
+    if (seq === checkSeq) setChecking(false);
+    if (!silent) { $("mGo").textContent = "Unlock & view"; if (!checkLock()) $("mGo").disabled = false; }
   }
 }
 
@@ -488,9 +523,10 @@ function logout(message) {
 $("pcSearch").addEventListener("input", renderPortcoList);
 $("adminItem").onclick = () => openModal({ role: "admin", id: "admin", name: "Admin", file: "admin.json" });
 $("mClose").onclick = closeModal; $("mCancel").onclick = closeModal;
-$("mGo").onclick = submitLogin;
-$("pinInput").addEventListener("input", (e) => { e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); });
-["pinInput", "adminInput"].forEach(id => $(id).addEventListener("keydown", (e) => { if (e.key === "Enter") submitLogin(); if (e.key === "Escape") closeModal(); }));
+$("mGo").onclick = () => submitLogin();
+$("pinInput").addEventListener("input", (e) => { e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); scheduleAutoCheck(); });
+$("adminInput").addEventListener("input", scheduleAutoCheck);
+["pinInput", "adminInput"].forEach(id => $(id).addEventListener("keydown", (e) => { if (e.key === "Enter") { clearTimeout(autoTimer); submitLogin(); } if (e.key === "Escape") closeModal(); }));
 $("pinModal").addEventListener("click", (e) => { if (e.target.id === "pinModal") closeModal(); });
 $("logoutBtn").onclick = () => logout();
 $("loginTheme").onclick = () => setTheme(theme === "dark" ? "light" : "dark");
