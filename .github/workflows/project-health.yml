@@ -1,0 +1,62 @@
+name: Project health
+
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * *"   # every day 10:30 AM IST
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test tools
+        run: pip install pytest openpyxl cryptography
+
+      - name: Run health checks
+        id: tests
+        continue-on-error: true
+        run: pytest tests -v -rA --junitxml=results.xml
+
+      - name: Results by script
+        if: always()
+        run: |
+          python - <<'PY'
+          import os, xml.etree.ElementTree as ET
+          names = {"TestDataFile": "data.xlsx", "TestProjectRollup": "project_rollup.py", "TestBuildSecure": "build_secure.py",
+                   "TestMondayRefresh": "build_from_monday.py", "TestDashboardPage": "index.html + app.js"}
+          groups, fails = {}, []
+          for tc in ET.parse("results.xml").getroot().iter("testcase"):
+              script = names.get(tc.get("classname", "").split(".")[-1], tc.get("classname"))
+              g = groups.setdefault(script, {"pass": 0, "fail": 0, "skip": 0})
+              label = tc.get("name").replace("test_", "").replace("_", " ")
+              f = tc.find("failure") if tc.find("failure") is not None else tc.find("error")
+              if f is not None:
+                  g["fail"] += 1
+                  fails.append(f"- **{script}** - {label}: {(f.get('message') or '').splitlines()[0][:200]}")
+              elif tc.find("skipped") is not None:
+                  g["skip"] += 1
+              else:
+                  g["pass"] += 1
+          out = ["## PortCo Learning Hub - project health", "", "| Script | Passed | Failed | Skipped | Result |", "|---|---|---|---|---|"]
+          for s, g in groups.items():
+              res = "❌ Failed" if g["fail"] else ("⚪ Not in repo" if not g["pass"] else "✅ Healthy")
+              out.append(f"| {s} | {g['pass']} | {g['fail']} | {g['skip']} | {res} |")
+          if fails:
+              out += ["", "### What failed", *fails]
+          open(os.environ["GITHUB_STEP_SUMMARY"], "a").write("\n".join(out) + "\n")
+          print("\n".join(out))
+          PY
+
+      - name: Fail the run if any check failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
