@@ -203,7 +203,6 @@ function renderKPIs(projects, comms, files) {
   const active = projects.filter(p => !isClosed(p)).length;
   const overdue = projects.filter(p => health(p) === "red").length;
   const atRisk = projects.filter(p => health(p) === "amber").length;
-  const avgFb = projects.length ? (projects.reduce((a, p) => a + p.FeedbackRounds, 0) / projects.length).toFixed(1) : "0";
   const sent = comms.filter(c => c.Direction === "Sent").length;
   const k = [
     ["PORTCOS", unique(projects.map(p => p.PortcoName)).length, "with projects", "gold"],
@@ -211,8 +210,8 @@ function renderKPIs(projects, comms, files) {
     ["AT RISK", atRisk, `due ≤ ${CONFIG.dueSoonDays} days`, "amber"],
     ["OVERDUE", overdue, "past due date", "red"],
     ["COMMUNICATIONS", comms.length, `${sent} sent · ${comms.length - sent} received`, ""],
-    ["FILES STORED", files.length, "scripts → final content", ""],
-    ["AVG FEEDBACK ROUNDS", avgFb, "per project", "gold"]
+    ["FILES STORED", files.length, "scripts → final content", ""]
+
   ];
   // The Portcos count only makes sense for admin – a portco only ever sees itself
   if (SESSION && SESSION.role === "portco") k.splice(k.findIndex(x => x[0] === "PORTCOS"), 1);
