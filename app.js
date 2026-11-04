@@ -203,6 +203,7 @@ function renderKPIs(projects, comms, files) {
   const active = projects.filter(p => !isClosed(p)).length;
   const overdue = projects.filter(p => health(p) === "red").length;
   const atRisk = projects.filter(p => health(p) === "amber").length;
+  const avgFb = projects.length ? (projects.reduce((a, p) => a + p.FeedbackRounds, 0) / projects.length).toFixed(1) : "0";
   const sent = comms.filter(c => c.Direction === "Sent").length;
   const k = [
     ["PORTCOS", unique(projects.map(p => p.PortcoName)).length, "with projects", "gold"],
@@ -210,8 +211,8 @@ function renderKPIs(projects, comms, files) {
     ["AT RISK", atRisk, `due ≤ ${CONFIG.dueSoonDays} days`, "amber"],
     ["OVERDUE", overdue, "past due date", "red"],
     ["COMMUNICATIONS", comms.length, `${sent} sent · ${comms.length - sent} received`, ""],
-    ["FILES STORED", files.length, "scripts → final content", ""]
-
+    ["FILES STORED", files.length, "scripts → final content", ""],
+    ["AVG FEEDBACK ROUNDS", avgFb, "per project", "gold"]
   ];
   // The Portcos count only makes sense for admin – a portco only ever sees itself
   if (SESSION && SESSION.role === "portco") k.splice(k.findIndex(x => x[0] === "PORTCOS"), 1);
@@ -739,108 +740,3 @@ $("loginTheme").onclick = () => setTheme(theme === "dark" ? "light" : "dark");
 
 initLogin();
 setInterval(() => loadSecure(false), CONFIG.autoRefreshSeconds * 1000);
-
-
-/* ===== Snapshot: export the dashboard as an image ===== */
-const H2C_URL = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
-let snapBusy = false;
-function snapToast(msg, ms = 3500) {
-  const t = $("snapToast"); t.textContent = msg; t.classList.remove("hidden");
-  clearTimeout(snapToast._t); if (ms) snapToast._t = setTimeout(() => t.classList.add("hidden"), ms);
-}
-function loadH2C() {
-  if (window.html2canvas) return Promise.resolve();
-  return new Promise((res, rej) => {
-    const s = document.createElement("script"); s.src = H2C_URL;
-    s.onload = res; s.onerror = () => rej(new Error("The image tool could not load. Check your internet connection."));
-    document.head.appendChild(s);
-  });
-}
-function snapFilters() {
-  const parts = [];
-  if ($("fStatus").value) parts.push("Status: " + $("fStatus").value);
-  if ($("fOwner").value) parts.push("Owner: " + $("fOwner").value);
-  if ($("fSearch").value.trim()) parts.push("Search: " + $("fSearch").value.trim());
-  return parts.join(" · ");
-}
-function snapStamp() {
-  return new Date().toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-async function snapshotBlob() {
-  await loadH2C();
-  if (document.fonts && document.fonts.ready) await document.fonts.ready;
-  const el = $("top");
-  const x = window.scrollX, y = window.scrollY;
-  window.scrollTo(0, 0);
-  const bg = getComputedStyle(document.body).backgroundColor;
-  const scale = Math.max(1, Math.min(2, 14000 / Math.max(el.scrollHeight + 1200, 1)));
-  const icon = document.querySelector('link[rel="icon"]');
-  const title = $("pageTitle").textContent, filters = snapFilters(), stamp = snapStamp();
-  try {
-    const canvas = await html2canvas(el, {
-      backgroundColor: bg, scale, useCORS: true, logging: false,
-      windowWidth: document.documentElement.clientWidth,
-      ignoreElements: (n) => n.classList && (n.classList.contains("topbar") || n.classList.contains("no-snap") ||
-        n.classList.contains("head-actions") || n.classList.contains("modal") || n.id === "snapToast"),
-      onclone: (doc) => {
-        const m = doc.getElementById("top");
-        const cap = doc.createElement("div"); cap.className = "snap-caption";
-        const left = doc.createElement("div"); left.className = "t";
-        if (icon) { const im = doc.createElement("img"); im.src = icon.href; im.alt = ""; left.appendChild(im); }
-        left.appendChild(doc.createTextNode("PortCo Learning Hub · " + title));
-        const right = doc.createElement("div"); right.className = "s";
-        right.textContent = "Snapshot taken " + stamp;
-        if (filters) { right.appendChild(doc.createElement("br")); right.appendChild(doc.createTextNode("Filtered by " + filters)); }
-        cap.append(left, right);
-        m.insertBefore(cap, m.firstChild);
-        const ph = doc.querySelector(".page-head"); if (ph) ph.style.display = "none";
-        doc.querySelectorAll(".table-wrap").forEach((t) => { t.style.maxHeight = "none"; t.style.overflow = "hidden"; });
-      }
-    });
-    return await new Promise((res, rej) => canvas.toBlob((b) => b ? res(b) : rej(new Error("The image could not be created.")), "image/png"));
-  } finally { window.scrollTo(x, y); }
-}
-function snapFileName() {
-  const d = new Date(), p = (n) => String(n).padStart(2, "0");
-  const who = $("pageTitle").textContent.replace(/\s*Dashboard\s*/i, "").trim().replace(/[^A-Za-z0-9]+/g, "-") || "Portfolio";
-  return `PortCo-Dashboard-${who}-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}.png`;
-}
-function snapDownload(blob) {
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = snapFileName();
-  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-}
-async function takeSnapshot(mode) {
-  if (snapBusy) return; snapBusy = true;
-  $("snapMenu").classList.add("hidden"); $("snapBtn").setAttribute("aria-expanded", "false");
-  const label = $("snapBtn").innerHTML; $("snapBtn").innerHTML = "&#8987;"; $("snapBtn").disabled = true;
-  snapToast("Capturing the dashboard…", 0);
-  try {
-    if (mode === "copy" && navigator.clipboard && window.ClipboardItem && window.isSecureContext) {
-      const p = snapshotBlob();
-      try {
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": p })]);
-        snapToast("Copied. Open your email and press Ctrl + V to paste the picture.", 5000);
-      } catch (e) {
-        snapDownload(await p);
-        snapToast("Your browser blocked copying, so the picture was downloaded instead. Attach it to your email.", 6000);
-      }
-    } else {
-      snapDownload(await snapshotBlob());
-      snapToast(mode === "copy" ? "Copying isn't supported here, so the picture was downloaded instead." : "Downloaded " + snapFileName(), 5000);
-    }
-  } catch (e) {
-    snapToast("Snapshot failed: " + (e && e.message ? e.message : "please try again."), 6000);
-  } finally {
-    $("snapBtn").innerHTML = label; $("snapBtn").disabled = false; snapBusy = false;
-  }
-}
-$("snapBtn").onclick = (e) => {
-  e.stopPropagation();
-  const open = $("snapMenu").classList.toggle("hidden") === false;
-  $("snapBtn").setAttribute("aria-expanded", String(open));
-};
-document.querySelectorAll("#snapMenu [data-snap]").forEach((b) => (b.onclick = () => takeSnapshot(b.dataset.snap)));
-document.addEventListener("click", (e) => {
-  if (!e.target.closest || !e.target.closest(".snap-wrap")) { $("snapMenu").classList.add("hidden"); $("snapBtn").setAttribute("aria-expanded", "false"); }
-});
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("snapMenu").classList.add("hidden"); });

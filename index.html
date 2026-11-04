@@ -94,16 +94,11 @@
         <div id="searchList" class="search-list hidden" role="listbox"></div>
       </div>
       <div class="top-actions">
-        <span id="viewBadge" hidden></span><span id="syncStatus" hidden>Loading…</span><input type="file" id="fileInputTop" hidden />
         <div class="theme-toggle" id="themeToggle" title="Switch theme"><span data-t="dark">&#9790; Dark</span><span data-t="light">&#9728; Light</span></div>
+        <span id="viewBadge" class="view-badge"></span>
+        <span id="syncStatus" class="sync">Loading…</span>
         <button id="refreshBtn" class="icon-btn" title="Reload data.xlsx">&#8635;</button>
-        <div class="snap-wrap no-snap">
-          <button id="snapBtn" class="icon-btn" aria-haspopup="true" aria-expanded="false" aria-label="Export dashboard as image" title="Export as image"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg></button>
-          <div id="snapMenu" class="snap-menu hidden" role="menu">
-            <button role="menuitem" data-snap="copy"><b>Copy image</b><span>Paste straight into an email (Ctrl + V)</span></button>
-            <button role="menuitem" data-snap="download"><b>Download PNG</b><span>Save a file to attach</span></button>
-          </div>
-        </div>
+        <label class="icon-btn admin-only" title="Load an Excel file from your computer">&#8679;<input type="file" id="fileInputTop" accept=".xlsx,.xls" hidden /></label>
         <button id="logoutBtn" class="ghost-btn logout">&#9099; Log out</button>
       </div>
     </header>
@@ -235,7 +230,6 @@
     <footer>PortCo Learning Hub &middot; numbers update automatically from data.xlsx</footer>
   </div>
 </div>
-<div id="snapToast" class="snap-toast hidden" role="status" aria-live="polite"></div>
 <script src="app.js"></script>
 </body>
 </html>
