@@ -2,10 +2,10 @@ name: Monday sync & publish dashboard
 
 on:
   schedule:
-    - cron: "*/30 * * * *"      # every 30 minutes (GitHub may run it a few minutes late)
+    - cron: "15 * * * *"        # every hour (GitHub may start it a few minutes late)
   workflow_dispatch:             # "Run workflow" button for an instant sync
   push:
-    branches: [main]             # republish when you upload files by hand
+    branches: [main]             # also sync + republish when you upload files
 
 permissions:
   contents: write
@@ -23,39 +23,54 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Install libraries
         run: pip install openpyxl cryptography
 
-      - name: Pull latest data from Monday.com
-        if: github.event_name != 'push'
+      - name: Read Monday.com (read only) and rebuild data.xlsx
         env:
           MONDAY_API_TOKEN: ${{ secrets.MONDAY_API_TOKEN }}
-          MONDAY_BOARD_IDS: ${{ vars.MONDAY_BOARD_IDS }}
-        run: python monday_sync.py
+          MONDAY_BOARDS: ${{ vars.MONDAY_BOARDS }}
+        run: python sync_monday_api.py
 
-      - name: Save updated data.xlsx to the repo
-        if: github.event_name != 'push'
+      - name: Save data.xlsx only if Monday changed
         run: |
-          if [ -n "$(git status --porcelain data.xlsx)" ]; then
+          python - <<'PY'
+          # data.xlsx is rebuilt every run; only keep it if the projects really changed (ignore the sync time)
+          import subprocess, sys
+          from openpyxl import load_workbook
+          def rows(path):
+              wb = load_workbook(path, data_only=True)
+              return {s: [tuple(r) for r in wb[s].iter_rows(values_only=True)] for s in wb.sheetnames if s != "SyncInfo"}
+          import shutil; shutil.copy("data.xlsx", "/tmp/fresh.xlsx")   # newest data (with sync time) is what gets published
+          old = subprocess.run(["git", "show", "HEAD:data.xlsx"], capture_output=True).stdout
+          open("/tmp/old.xlsx", "wb").write(old)
+          same = rows("/tmp/old.xlsx") == rows("data.xlsx")
+          if same:
+              subprocess.run(["git", "checkout", "--", "data.xlsx"], check=True)
+          open("/tmp/changed", "w").write("no" if same else "yes")
+          PY
+          if [ "$(cat /tmp/changed)" = "yes" ]; then
             git config user.name "monday-sync-bot"
             git config user.email "monday-sync-bot@users.noreply.github.com"
             git add data.xlsx
             git commit -m "Monday sync $(date -u +'%Y-%m-%d %H:%M') UTC"
             git push
           else
-            echo "No changes from Monday."
+            echo "No project changes in Monday - data.xlsx not touched."
           fi
 
       - name: Build secure site (encrypt each portco's data with its PIN)
         env:
           PORTCO_ACCESS: ${{ secrets.PORTCO_ACCESS }}
-        run: python build_secure.py
+        run: |
+          cp /tmp/fresh.xlsx data.xlsx
+          python build_secure.py
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
