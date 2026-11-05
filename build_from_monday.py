@@ -66,14 +66,17 @@ def main():
     existing = ms.read_sheet(wb, "Projects")
     before = {norm(r.get("ProjectName")): r for r in existing}
     assign_ids(projects, existing)
-    ms.write_sheet(wb, "Projects", ms.PROJECT_HEADERS, [[p.get(h, "") for h in ms.PROJECT_HEADERS] for p in projects],
+    others = [r for r in existing if norm(r.get("PortcoName")) != norm(a.portco)]   # other portcos' boards stay as they are
+    ms.write_sheet(wb, "Projects", ms.PROJECT_HEADERS, [[r.get(h, "") for h in ms.PROJECT_HEADERS] for r in others] +
+                   [[p.get(h, "") for h in ms.PROJECT_HEADERS] for p in projects],
                    [11, 12, 46, 16, 16, 15, 13, 13, 17, 10, 15, 10], date_cols=("F", "G", "H"))
-    kept = [f for f in ms.read_sheet(wb, "Files") if "monday.com" not in str(f.get("Link") or "")]
+    kept = [f for f in ms.read_sheet(wb, "Files")
+            if "monday.com" not in str(f.get("Link") or "") or norm(f.get("PortcoName")) != norm(a.portco)]
     ms.write_sheet(wb, "Files", ms.FILES_HEADERS, [[f.get(h, "") for h in ms.FILES_HEADERS] for f in kept] + file_rows(projects),
                    [52, 12, 11, 15, 9, 13, 60], date_cols=("F",))
     now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     ms.write_sheet(wb, "SyncInfo", ["Key", "Value"], [["Source", "Monday.com"], ["Boards", f"{a.board_name} (live read)"],
-                   ["LastSync", now], ["Projects", len(projects)]], [14, 50])
+                   ["LastSync", now], ["Projects", len(projects) + len(others)]], [14, 50])
     wb.save(a.out)
 
     fields = ["Status", "Progress", "DueDate", "StartDate", "IDOwner", "Priority", "FeedbackRounds"]
@@ -95,7 +98,7 @@ def main():
     act = [p for p in projects if p["Status"] not in ("Delivered", "On Hold")]
     overdue = [p["ProjectName"] for p in act if p["DueDate"] and p["DueDate"].date() < today.date()]
     nodates = [p["ProjectName"] for p in act if not p["DueDate"]]
-    print(json.dumps({"projects": len(projects), "delivered": sum(p["Status"] == "Delivered" for p in projects),
+    print(json.dumps({"portco": a.portco, "projects": len(projects), "delivered": sum(p["Status"] == "Delivered" for p in projects),
                       "new": new, "changed": changed, "removed": removed, "overdue": overdue, "no_dates": nodates,
                       "any_change": bool(new or changed or removed)}, indent=1, default=str))
 

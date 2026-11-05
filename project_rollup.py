@@ -79,15 +79,25 @@ def rollup(group_name, tasks, portco, skip_groups=()):
 
 
 def assign_ids(projects, existing, prefix="PRJ-", start=101):
-    """Keep the ProjectID already used for a project name so communications/files stay linked."""
-    known = {norm(r.get("ProjectName")): r.get("ProjectID") for r in existing if r.get("ProjectID")}
-    nums = [int(m.group(1)) for v in known.values() if (m := re.search(r"(\d+)$", str(v)))]
+    """Keep the ProjectID already used for the same portco + project name, so communications/files stay linked.
+    Never gives two projects the same ID (e.g. the same course name on two portco boards)."""
+    by_pair, by_name = {}, {}
+    for r in existing:
+        if r.get("ProjectID"):
+            by_pair.setdefault((norm(r.get("PortcoName")), norm(r.get("ProjectName"))), r["ProjectID"])
+            by_name.setdefault(norm(r.get("ProjectName")), []).append(r["ProjectID"])
+    ids = [str(r.get("ProjectID")) for r in existing if r.get("ProjectID")]
+    nums = [int(m.group(1)) for v in ids if (m := re.search(r"(\d+)$", v))]
     nxt = max(nums + [start - 1]) + 1
+    used = set()
     for p in projects:
-        pid = known.get(norm(p["ProjectName"]))
-        if not pid:
+        pid = by_pair.get((norm(p.get("PortcoName")), norm(p["ProjectName"])))
+        if not pid and not p.get("PortcoName"):
+            pid = next((i for i in by_name.get(norm(p["ProjectName"]), []) if i not in used), None)
+        if not pid or pid in used:
             pid = f"{prefix}{nxt}"
             nxt += 1
+        used.add(pid)
         p["ProjectID"] = pid
     return projects
 
