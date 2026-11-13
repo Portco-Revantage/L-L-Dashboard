@@ -1,0 +1,81 @@
+/* PortCo Learning Hub – motion layer.
+   Liquid "pill" that stretches between menu items, staggered entrances,
+   count-up numbers, growing bars. Delete motion.css + motion.js to switch off. */
+
+/* ---------- Liquid pill (sidebar menu + theme switch) ---------- */
+nav.has-pill{position:relative}
+nav.has-pill a{position:relative;z-index:1;background:transparent}
+nav.has-pill a.active{background:transparent !important}
+.theme-toggle.has-pill{position:relative}
+.theme-toggle.has-pill span{position:relative;z-index:1}
+.theme-toggle.has-pill span.on{background:transparent !important}
+.m-pill{position:absolute;z-index:0;pointer-events:none;background:var(--fill,var(--gold));
+  box-shadow:0 6px 18px -6px rgba(201,169,155,.55);opacity:0;transition:opacity .25s}
+.m-pill.ready{opacity:1}
+nav .m-pill{border-radius:8px}
+.theme-toggle .m-pill{border-radius:20px;box-shadow:none}
+nav a i{transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+nav a.active i{transform:scale(1.18)}
+
+/* ---------- Page entrance ---------- */
+@keyframes m-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes m-pop{0%{opacity:0;transform:translateY(10px) scale(.96)}100%{opacity:1;transform:none}}
+@keyframes m-slide-in{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+@keyframes m-fade{from{opacity:0}to{opacity:1}}
+
+body:not(.locked) .sidebar nav a{animation:m-slide-in .5s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i,0) * 45ms + 120ms)}
+body:not(.locked) .page-head{animation:m-rise .55s cubic-bezier(.22,1,.36,1) both}
+
+/* KPI tiles: rise one after another, lift on hover */
+.kpis .kpi{animation:m-rise .6s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i,0) * 70ms);
+  transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .25s,background-color .25s,border-color .25s}
+.kpis .kpi:hover{transform:translateY(-3px);box-shadow:0 10px 24px -12px rgba(0,0,0,.55)}
+.kpi .v{font-variant-numeric:tabular-nums}
+
+/* Cards fade up as they scroll into view */
+.main .m-reveal{opacity:0;transform:translateY(22px);
+  transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1);transition-delay:var(--d,0ms)}
+.main .m-reveal.m-in{opacity:1;transform:none}
+.main .card{transition:border-color .25s,box-shadow .25s,background-color .25s}
+.main .card:hover{border-color:var(--gold-3,var(--line));box-shadow:0 12px 30px -18px rgba(0,0,0,.6)}
+
+/* Health bar segments grow from the left */
+.health-bar i{transition:width .9s cubic-bezier(.22,1,.36,1);transition-delay:var(--d,0ms)}
+
+/* Timeline: bars draw from their start date, progress fills after */
+@keyframes m-draw{from{clip-path:inset(0 100% 0 0 round 9px)}to{clip-path:inset(0 0 0 0 round 9px)}}
+@keyframes m-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes m-drop{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.tl-anim .tl-bar{animation:m-draw .8s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i,0) * 55ms + 150ms)}
+.tl-anim .tl-bar .fg{transform-origin:left center;animation:m-fill .9s cubic-bezier(.65,0,.35,1) both;animation-delay:calc(var(--i,0) * 55ms + 550ms)}
+.tl-anim .tl-bar .pct{animation:m-fade .4s ease both;animation-delay:calc(var(--i,0) * 55ms + 900ms)}
+.tl-anim .tl-today{transform-origin:top;animation:m-drop .7s cubic-bezier(.22,1,.36,1) both .1s}
+.tl-anim .tl-row{animation:m-fade .4s ease both;animation-delay:calc(var(--i,0) * 55ms)}
+.tl-bar{transition:filter .2s,transform .2s}
+.tl-bar:hover{filter:brightness(1.15);transform:translateY(-1px)}
+
+/* Table rows and list items */
+.m-rows tbody tr{animation:m-rise .45s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i,0) * 30ms)}
+.pc{transition:transform .25s cubic-bezier(.22,1,.36,1),border-color .2s,box-shadow .25s}
+.pc:hover{transform:translateY(-3px);box-shadow:0 10px 24px -14px rgba(0,0,0,.6)}
+
+/* Login screen */
+.login-box{animation:m-rise .7s cubic-bezier(.22,1,.36,1) both}
+.login-list.m-intro .login-item{animation:m-rise .5s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i,0) * 50ms + 200ms)}
+.modal:not(.hidden){animation:m-fade .2s ease both}
+.modal:not(.hidden) .modal-card{animation:m-pop .38s cubic-bezier(.34,1.4,.64,1) both}
+.m-shake{animation:m-shake .4s cubic-bezier(.36,.07,.19,.97) both !important}
+@keyframes m-shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-7px)}40%,60%{transform:translateX(7px)}}
+
+/* Refresh button spins while data reloads */
+@keyframes m-spin{to{transform:rotate(360deg)}}
+#refreshBtn.m-spin{animation:m-spin .8s cubic-bezier(.65,0,.35,1)}
+
+/* ---------- Motion off: snapshot export, or "reduce motion" set on the computer ---------- */
+html.motion-off *,html.motion-off *::before,html.motion-off *::after{animation:none !important;transition:none !important}
+html.motion-off .main .m-reveal{opacity:1 !important;transform:none !important}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+  .main .m-reveal{opacity:1 !important;transform:none !important}
+}
+.prog .bar span{transition:width 1s cubic-bezier(.22,1,.36,1);transition-delay:var(--d,0ms)}
