@@ -73,8 +73,32 @@ jobs:
           python build_secure.py
 
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: _site            # only the built site - data.xlsx and scripts are NOT published
-      - id: deployment
+          include-hidden-files: true
+
+      # GitHub sometimes can't "see" the just-uploaded site for a few seconds.
+      # Try to publish; if that fails, wait and try again (up to 3 times) before reporting a failure.
+      - name: Publish to GitHub Pages (try 1)
+        id: deploy1
+        continue-on-error: true
         uses: actions/deploy-pages@v4
+      - name: Wait before retrying
+        if: steps.deploy1.outcome == 'failure'
+        run: sleep 60
+      - name: Publish to GitHub Pages (try 2)
+        id: deploy2
+        if: steps.deploy1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - name: Wait before last try
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        run: sleep 120
+      - name: Publish to GitHub Pages (try 3)
+        id: deploy3
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+      - name: Site address
+        id: deployment
+        run: echo "page_url=${{ steps.deploy1.outputs.page_url || steps.deploy2.outputs.page_url || steps.deploy3.outputs.page_url }}" >> "$GITHUB_OUTPUT"
